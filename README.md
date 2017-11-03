@@ -1,4 +1,4 @@
-# cnap-fnac
+# MNAM
 
 **usage**
 
