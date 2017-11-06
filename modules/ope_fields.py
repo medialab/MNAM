@@ -18,6 +18,12 @@ def get_operation_expo_title(operation):
 		return m.group(1)
 
 def get_from_operation_expo_heuristic_range(field, opcode_start_list, opcode_end_list, opcode_trip_list, folder_category, year_limit = 0, complete_range = 0):
+	"""Get heuristic exhibition dates from the given field (aka list of operations) that is
+	tagged as folder_category and newer than year_limit.
+	If an exhibition is not closed when year_limit is reached (ie an exhibition ended after year_limit but started before),
+	the start date search is done if complete_range is 1, else '' is returned for the start_date.
+	Return is a dict in the form: {`Exhibition_title1`:[[start_date1, end_date1], [start_date2, end_date2]], `Exhibition title2`...}
+	(a list of [start_date, end_date] is needed because several exhibitions can have the same title)"""
 	#operation_list = get_list_from_html(field)
 	operation_list = field
 	#print(operation_list)
@@ -119,6 +125,7 @@ def get_from_operation_expo_heuristic_range(field, opcode_start_list, opcode_end
 	return range_dates
 
 def get_state_range(doc):
+	"""Unfinished attempt to track artwork location an status through operations."""
 	start_date = ''
 	end_date = ''
 	ope_list = []
@@ -130,7 +137,7 @@ def get_state_range(doc):
 	'261I':'MNAM', '262I':'MNAM (déménagement)', '210E':'Ext', '212E':'Ext (accrochage)',\
 	'213E':'Ext', '240E':'Ext (itinérance)'}#...
 	state_ranges = {}
-	operation_list = reversed(get_list_from_html(doc["all_realized_operations_history"]))
+	operation_list = reversed(doc["all_realized_operations_history"])
 	for index, operation in enumerate(operation_list):
 		op_dict = filter_operation_record(operation)
 		if not index:
