@@ -15,9 +15,9 @@ Get geonames geolocation from given csv column.
 
 Command-line arguments:
 
-0. Source CSV path
-0. Destination CSV path
-0. Source CSV column number for querying geonames
+1. Source CSV path
+2. Destination CSV path
+3. Source CSV column number for querying geonames
 
 ## groupEnsemblesAndExport_mod.py
 
@@ -58,8 +58,8 @@ Use `melt_ope_expo.py` to tag exhibitions from a CSV file.
 
 Command-line arguments:
 
-0. Source CSV
-0. Destination CSV
+1. Source CSV
+2. Destination CSV
 
 ## queryToCSV.py
 
@@ -69,9 +69,9 @@ Get directly a CSV from a mongo query.
 
 Command-line arguments:
 
-0. Mongo restriction dict (first argument of the find method)
-0. Mongo projection dict (second argument of the find method)
-0. Destination CSV file
+1. Mongo restriction dict (first argument of the find method)
+2. Mongo projection dict (second argument of the find method)
+3. Destination CSV file
 
 ## clean_results-splitted_correct_lists.py
 
@@ -83,11 +83,11 @@ Basically the same as `clean_results-splitted.py` using the modular `get_html_li
 
 Merge two CSV files (one categorized as quali, the other as quanti with this approach:
 
-0. Copy quali CSV
-0. Copy records from quanti CSV which are not already present in the quali CSV
+1. Copy quali CSV
+2. Copy records from quanti CSV which are not already present in the quali CSV
 
 Command-line arguments:
 
-0. Quanti CSV file
-0. Quali CSV file
-0. Destination CSV file
+1. Quanti CSV file
+2. Quali CSV file
+3. Destination CSV file
