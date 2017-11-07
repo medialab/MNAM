@@ -4,7 +4,7 @@
 import re
 from pymongo import MongoClient
 
-db = MongoClient("localhost", 27017)["myproject"]
+db = MongoClient("localhost", 27017)["mnam"]
 
 def format_field(val):
     if type(val) == bool:
