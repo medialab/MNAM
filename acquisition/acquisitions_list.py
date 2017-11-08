@@ -5,6 +5,8 @@ import re
 db = pymongo.MongoClient("localhost", 27017)["mnam"]
 
 headers = ["_id",
+ "title",
+ "domaine",
  "mode_acquisition",
  "mode_acquisition_cleaned",
  "acquisition_date",
@@ -14,18 +16,21 @@ headers = ["_id",
  "artist_ids",
  "artist_names",
  "artist_nationalities",
- "artist_birthdeath"]
+ "artist_birthdeath",
+ ]
 
 artists = db.Artwork.aggregate([
     {"$match": {"notEnsemble":True}},
     {"$project":{
+        "title": "$title_notice",
+        "domaine": "$domain",
         "mode_acquisition": "$acquisition_mode",
         "acquisition_date": "$acquisition_year",
         "creation_date": "$date_creation",
         "gender": 1,
         "artist_ids": "$authors",
         "artist_names": "$authors_list",
-        "artist_birthdeath": "$author_birth_death",
+        "artist_birthdeath": "$authors_birth_death",
         "artist_nationalities": "$authors_nationality",
     }}
     ])
@@ -78,7 +83,7 @@ acquisition_mode_cleaning = {"Achat":"Achat",
 centuries_approximations = { "début XXe siècle":"1900 - 1930",
             "fin XIXe siècle - début XXe siècle": "1880 - 1930",
             "1ère moitié XXe siècle":"1900 - 1950",
-            "milieu de XIXe siècle": "1830 - 1960",
+            "milieu de XIXe siècle": "1830 - 1860",
             "XIXe siècle": "1800 - 1899",
             "XVIIIe siècle": "1700 - 1799",
             "vers XVIIe siècle": "1600 - 1699"}
@@ -86,13 +91,8 @@ years_re = re.compile(r"\d{4}")
 
 def clean_creation_date(acquisition_date, creation_date):
     years = years_re.findall(creation_date)
-    if len(years)==1:
-        return years[0]
-    elif len(years) > 1:
-        if acquisition_date:
-            return min(years, key = lambda y: abs(int(y)-int(acquisition_date)))
-        else:
-            return min(years)
+    if len(years)>=1:
+        return min(years)
     else:
         return ''
 
@@ -106,7 +106,7 @@ for artist in artists:
     else:
         artist['creation_year']=''           
 
-    print(artist['acquisition_date'] if 'acquisition_date' in artist else 'N/A', artist["creation_date"] if 'creation_date' in artist else 'N/A', artist['creation_year'])
+    #print(artist['acquisition_date'] if 'acquisition_date' in artist else 'N/A', artist["creation_date"] if 'creation_date' in artist else 'N/A', artist['creation_year'])
 
     artist['mode_acquisition_cleaned'] = acquisition_mode_cleaning[artist['mode_acquisition'].strip(' ')]
 
