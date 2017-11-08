@@ -62,22 +62,23 @@ class Artwork extends Component {
       })
 
 
+    let currentStatus = 'uninstallation'
     const bubbles = data.operations
-      // .filter((o, i) => i < data.operations.length -2)
       .map((o, i) => {
+        if (o.opt_code === '212I' || o.opt_code === '212E') {
+          currentStatus = 'installation'
+        }
+        if (o.opt_code === '213I' || o.opt_code === '213E') {
+          currentStatus = 'uninstallation'
+        }
+
         const x = map(o.date, timeRange[0], timeRange[1], 0, width)
-        // const y = height
-
         const alpha = map(o.date, timeRange[0], timeRange[1], 0, 1)
-
         const previousStep = Math.floor(alpha * data.ySteps.length)
         const nextStep = Math.ceil(alpha * data.ySteps.length)
-
         let y = height
         if (!!data.ySteps[previousStep] && !!data.ySteps[nextStep]) {
           y = lerp(data.ySteps[previousStep].y, data.ySteps[nextStep].y, map(x, data.ySteps[previousStep].x, data.ySteps[nextStep].x, 0, 1))
-          // if (y < 0) y = 0
-          // if (y > height) y = height
           y = height - y
         }
         if (Number.isNaN(y)) y = height
@@ -88,7 +89,7 @@ class Artwork extends Component {
             cx={ x }
             cy={ y }
             r={ 3 }
-            fill={ o.opt_code === '212I' || o.opt_code === '213I' || o.opt_code === '212E' || o.opt_code === '213E' ? 'green' : 'red' }
+            fill={ currentStatus === 'installation' ? '#ea5a47' : '#4543dd' }
           />
         )
       })
@@ -96,7 +97,7 @@ class Artwork extends Component {
     const label = (
       <text
         style={{
-          fill: '#3e3eba',
+          fill: '#8080e8',
           fontSize: 13
         }}
         y={ height + 18}

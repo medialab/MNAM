@@ -1,10 +1,15 @@
 /*
 
   FEATURES
-    artwork title
-    color bubbles
-    size factor + layout
-    time cursor
+    VIZ
+      color bubbles
+      time cursor
+      visualize external
+      operation types
+      size factor + layout
+    FILTERING
+    INTERACTIONS
+      overlay operation
   QUESTIONS
     100% reliable accrochage data
   MISC
