@@ -12,9 +12,10 @@ client.open('GET', process.env.PUBLIC_URL + '/data/artwork_operations.json')
 client.onload = function() {
   // App initialization
   const rootElement = document.getElementById('root')
+  const data = JSON.parse(client.responseText)
   ReactDOM.render(
     <App 
-      data={ client.responseText }
+      data={ data }
     />,
     rootElement
   )
