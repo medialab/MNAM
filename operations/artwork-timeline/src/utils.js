@@ -6,3 +6,11 @@ export function map(value, start1, stop1, start2, stop2) {
 export function lerp(start, end, alpha) {
   return start + (end - start) * alpha
 }
+
+export function cleanupLabel(s) {
+  if (s.length > 30) {
+    return s.slice(0,27) + '...'
+  } else {
+    return s
+  }
+}

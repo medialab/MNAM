@@ -1,15 +1,17 @@
 /*
 
   FEATURES
-    line colors
     artwork title
-    event bubbles
-    uncrop visibility
+    color bubbles
+    size factor + layout
+    time cursor
   QUESTIONS
     100% reliable accrochage data
   MISC
     window resize
     move width and height to props
+  ISSUES
+    removed last operation
 
 */
 
@@ -20,12 +22,15 @@ import { map } from './utils'
 
 import './App.css';
 
+
+
 class App extends Component {
   constructor (props) {
     super(props)
     this.state = {
       artworks: [],
-      timeRange: [10000000000000, 0]
+      timeRange: [10000000000000, 0],
+      artworkCount: 10
     }
   }
 
@@ -33,14 +38,15 @@ class App extends Component {
 
   componentWillReceiveProps (props) {
     const {
-      timeRange
+      timeRange,
+      artworkCount
     } = this.state
 
 
     const width = this.refs.timelineContainer.clientWidth
 
     const artworks = props.data
-      .filter((d, i) => i < 1)
+      .filter((d, i) => i < artworkCount)
       .map(a => {
         const operations = a.opt_field
           .filter(o => {
@@ -87,6 +93,8 @@ class App extends Component {
         })
 
       let y = 0
+      let acc = 0
+      let vel = 0
 
       const ySteps = new Array(width).fill(0)
         .map((v, i) => {
@@ -95,18 +103,27 @@ class App extends Component {
           const pastOperations = visibilityOperations.filter(o => new Date(o.date).getTime() <= x)
           const latestOperation = pastOperations[pastOperations.length - 1]
           if (!!latestOperation && latestOperation.type === 'installation') {
+            acc = 0.002
             // y ++
-            y = Math.min(50, y + 1)
+            // y = Math.min(50, y + 1)
           } else {
+            acc = -0.02
             // y --
-            y = Math.max(0, y - 1)
+            // y = Math.max(0, y - 1)
           }
+          vel += acc
+          y += vel
+          if (y < 0) {
+            y = 0
+            if (vel < 0) vel = 0
+          }
+          acc = 0
           return y
         })
-        .filter((y, i) => i % 10 === 0)
+        .filter((y, i) => i % 5 === 0)
         .map((y, i) => {
           return {
-            x: map(i, 0, Math.floor(width / 10), 0, width),
+            x: map(i, 0, Math.floor(width / 5), 0, width),
             y: y
           }
         })
