@@ -37,4 +37,6 @@ html, body {
 
   .App svg {
     overflow: visible;
+    /*border: 1px solid #141428;*/
+    margin-top: 50px;
   }

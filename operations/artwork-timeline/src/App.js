@@ -2,32 +2,40 @@
 
   FEATURES
     VIZ
-      change physics
-      zoom in time
-      start timeline at acquisition
+      add date labels
+      sort by highest visibility
       scroll through sample
       operation types
+      scale factor + layout
+      ==
+      add space between stopList and others
       time cursor
-      size factor + layout
+      zoom in time
       visualize external
     FILTERING
+      only faves
     INTERACTIONS
       overlay operation
+      add and remove fav
   QUESTIONS
     100% reliable accrochage data
   MISC
     window resize
     move width and height to props
   ISSUES
+    year labeling is offset?
+    error when not filtering dates
+    ==
     removed last operation
     missing artworks
+    line sometimes start before first operation
 
 */
 
 
 import React, { Component } from 'react';
 import Artwork from './Artwork'
-import { map } from './utils'
+import { map, shuffleArray, lerp } from './utils'
 
 import './App.css';
 
@@ -39,7 +47,7 @@ class App extends Component {
     this.state = {
       artworks: [],
       timeRange: [10000000000000, 0],
-      artworkCount: 11,
+      artworkCount: 100,
       stopList: [
         150000000030351,
         150000000029858,
@@ -59,7 +67,8 @@ class App extends Component {
         150000000017432,
         150000000012643
       ],
-      height: 50
+      height: 50,
+      halfDecadeRange: [2000, 2015]
     }
   }
 
@@ -69,32 +78,31 @@ class App extends Component {
     const {
       timeRange,
       artworkCount,
-      stopList
+      stopList,
+      height
     } = this.state
 
 
     const width = this.refs.timelineContainer.clientWidth
 
-    function shuffle(a) {
-      for (let i = a.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [a[i], a[j]] = [a[j], a[i]];
-      }
-    }
+    // shuffleArray(props.data)
 
-    // shuffle(props.data)
-
+    stopList.reverse()
+      .forEach(id => {
+        const artwork = props.data.find(a => a._id === id)
+        if (!!artwork) {
+          artwork.favorite = true
+          const oldID = props.data.indexOf(artwork)
+          props.data.move(oldID, 0)
+        }
+      })
 
     const artworks = props.data
-      .filter(d => {
-        if (stopList.indexOf(d._id) > -1) console.log('aga')
-        return stopList.indexOf(d._id) > -1
-      })
       .filter((d, i) => i < artworkCount)
       .map(a => {
         const operations = a.opt_field
           .filter(o => {
-            return new Date(o.date).getTime() >= new Date('1/1/1980').getTime()
+            return new Date(o.date).getTime() >= new Date('1/1/1995').getTime()
           })
           .sort((a, b) => {
             return new Date(a.date) - new Date(b.date).getTime()
@@ -118,12 +126,22 @@ class App extends Component {
       return Math.min(a, minOperations)
     }, timeRange[0])
 
-    timeRange[1] = artworks.reduce((a, b) => {
-      const maxOperations = b.operations.reduce((c, d) => {
-        return Math.max(c, new Date(d.date).getTime())
-      }, a)
-      return Math.max(a, maxOperations)
-    }, timeRange[1])
+    timeRange[1] = Date.now()
+
+    // const ealiestYear = new Date(timeRange[0]).getYear()
+
+    const halfDecadeRange = [new Date(timeRange[0]), new Date(timeRange[1])]
+    halfDecadeRange[0].setDate(1)
+    halfDecadeRange[0].setMonth(0)
+    halfDecadeRange[0].setYear(1900 + halfDecadeRange[0].getYear() - halfDecadeRange[0].getYear() % 5)
+    halfDecadeRange[0] = 1900 + halfDecadeRange[0].getYear()
+    halfDecadeRange[1].setDate(1)
+    halfDecadeRange[1].setMonth(0)
+    halfDecadeRange[1].setYear(1900 + halfDecadeRange[1].getYear() - halfDecadeRange[1].getYear() % 5 + 5)
+    halfDecadeRange[1] = 1900 + halfDecadeRange[1].getYear()
+
+    // timeRange[0] = prevHalfDecade.getTime()
+    // timeRange[1] = nextHalfDecade.getTime()
 
     const processedArtworks = artworks.map(a => {
       const visibilityOperations = a.operations
@@ -147,13 +165,23 @@ class App extends Component {
           const pastOperations = visibilityOperations.filter(o => new Date(o.date).getTime() <= x)
           const latestOperation = pastOperations[pastOperations.length - 1]
           if (!!latestOperation && latestOperation.type === 'installation') {
+            // const dist = height - y
+            // const direction = dist / Math.abs(dist)
+            // acc = Math.pow(Math.abs(dist), 2) * 0.00001 * direction
+
+            if (acc < 0) vel = lerp(vel, 0, 0.9)
             acc = 0.002
-            // y ++
-            // y = Math.min(50, y + 1)
+
+            // y = lerp(y, height * 2, 0.1)
           } else {
+            // const dist = - y
+            // const direction = (dist + 1) / Math.abs(dist + 1)
+            // acc = Math.pow(Math.abs(dist), 2) * 0.00001 * direction
+            
+            if (acc > 0) vel = lerp(vel, 0, 0.5)
             acc = -0.02
-            // y --
-            // y = Math.max(0, y - 1)
+
+            // y = lerp(y, 0, 0.1)
           }
           vel += acc
           y += vel
@@ -161,7 +189,6 @@ class App extends Component {
             y = 0
             if (vel < 0) vel = 0
           }
-          acc = 0
           return y
         })
         .filter((y, i) => i % 5 === 0)
@@ -182,7 +209,8 @@ class App extends Component {
     this.setState({
       ...this.state,
       artworks: processedArtworks,
-      timeRange
+      timeRange,
+      halfDecadeRange
     })
   }
 
@@ -191,8 +219,13 @@ class App extends Component {
     const {
       artworks,
       timeRange,
-      height
+      height,
+      halfDecadeRange
     } = this.state
+
+    // if (artworks.length === 0) return (
+    //   <div className="App"></div>
+    // )
 
     const timelines = artworks.map((a, i) => {
       return (
@@ -207,6 +240,43 @@ class App extends Component {
       )
     })
 
+    // console.log('aga', halfDecadeRange, (halfDecadeRange[1] - halfDecadeRange[0])/ 5)
+    const halfDecades = new Array((halfDecadeRange[1] - halfDecadeRange[0])/ 5).fill(0)
+    const yearAxix = halfDecades
+      .map((y, i) => {
+        return halfDecadeRange[0] + i * 5
+      })
+      .map((y, i) => {
+        const d = new Date()
+        d.setYear(y)
+        const x = map(d.getTime(), timeRange[0], timeRange[1], 0, window.innerWidth - 100)
+        return (
+          <g
+           key={ `yearlabel-${i}` }
+          >
+            <text
+              style={{
+                fill: '#8080e8',
+                fontSize: 13,
+                textAnchor: 'middle'
+              }}
+              x={ x }
+              y={ 0 }
+            >
+              { y }
+            </text>
+            <line
+              x1={ x }
+              x2={ x }
+              y1={ 25 }
+              y2={ artworks.length * height + 25 }
+              stroke={ '#8080e8' }
+              opacity={ 0.2 }
+            />
+          </g>
+        )
+      })
+
     return (
       <div className="App">
         <h1>
@@ -219,6 +289,7 @@ class App extends Component {
             height: artworks.length * height,
           }}
         >
+          { yearAxix }
           { timelines }
         </svg>
       </div>
