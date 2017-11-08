@@ -2,11 +2,14 @@
 
   FEATURES
     VIZ
-      color bubbles
-      time cursor
-      visualize external
+      change physics
+      zoom in time
+      start timeline at acquisition
+      scroll through sample
       operation types
+      time cursor
       size factor + layout
+      visualize external
     FILTERING
     INTERACTIONS
       overlay operation
@@ -17,6 +20,7 @@
     move width and height to props
   ISSUES
     removed last operation
+    missing artworks
 
 */
 
@@ -35,7 +39,27 @@ class App extends Component {
     this.state = {
       artworks: [],
       timeRange: [10000000000000, 0],
-      artworkCount: 10
+      artworkCount: 11,
+      stopList: [
+        150000000030351,
+        150000000029858,
+        150000000017493,
+        150000000026300,
+        150000000039547,
+        150000000022506,
+        150000000005353,
+        150000000014640,
+        150000000066484,
+        150000000455601,
+        150000000043959,
+        150000000045372,
+        150000000019231,
+        150000000030904,
+        150000000023706,
+        150000000017432,
+        150000000012643
+      ],
+      height: 50
     }
   }
 
@@ -44,18 +68,33 @@ class App extends Component {
   componentWillReceiveProps (props) {
     const {
       timeRange,
-      artworkCount
+      artworkCount,
+      stopList
     } = this.state
 
 
     const width = this.refs.timelineContainer.clientWidth
 
+    function shuffle(a) {
+      for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+      }
+    }
+
+    // shuffle(props.data)
+
+
     const artworks = props.data
+      .filter(d => {
+        if (stopList.indexOf(d._id) > -1) console.log('aga')
+        return stopList.indexOf(d._id) > -1
+      })
       .filter((d, i) => i < artworkCount)
       .map(a => {
         const operations = a.opt_field
           .filter(o => {
-            return new Date(o.date).getTime() >= new Date('1/1/1995').getTime()
+            return new Date(o.date).getTime() >= new Date('1/1/1980').getTime()
           })
           .sort((a, b) => {
             return new Date(a.date) - new Date(b.date).getTime()
@@ -151,7 +190,8 @@ class App extends Component {
 
     const {
       artworks,
-      timeRange
+      timeRange,
+      height
     } = this.state
 
     const timelines = artworks.map((a, i) => {
@@ -162,6 +202,7 @@ class App extends Component {
           data={ a }
           timeRange={ timeRange }
           index={ i }
+          height={ height }
         />
       )
     })
@@ -169,13 +210,13 @@ class App extends Component {
     return (
       <div className="App">
         <h1>
-          Artwork timeline
+          ARTWORK TIMELINE
         </h1>
         <svg
           ref="timelineContainer"
           style={{
             width: "100%",
-            height: 500,
+            height: artworks.length * height,
           }}
         >
           { timelines }

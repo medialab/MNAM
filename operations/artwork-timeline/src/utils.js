@@ -7,9 +7,10 @@ export function lerp(start, end, alpha) {
   return start + (end - start) * alpha
 }
 
-export function cleanupLabel(s) {
-  if (s.length > 30) {
-    return s.slice(0,27) + '...'
+export function cleanupLabel(s, length) {
+  if (!s) return s
+  if (s.length > length) {
+    return s.slice(0, length - 3) + '...'
   } else {
     return s
   }

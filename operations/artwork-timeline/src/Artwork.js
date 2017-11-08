@@ -13,12 +13,12 @@ class Artwork extends Component {
       data,
       timeRange,
       index,
+      height
     } = this.props
 
     const containerElement = document.querySelector('.App')
     const width = containerElement.clientWidth - 100
-    const height = 50
-    const originalY = index * 50
+    const originalY = index * height
 
     const path = line()
       .x(d => d.x)
@@ -35,6 +35,7 @@ class Artwork extends Component {
         data.ySteps
           .forEach((s, j) => {
             const t = map(j, 0, data.ySteps.length, timeRange[0], timeRange[1])
+            if (t < data.operations[0].date) return
             if((!nextOperation && t >= currentOperation.date) || (t >= currentOperation.date && t <= nextOperation.date)) {
               if (stepRange[0] > j) stepRange[0] = j
               if (stepRange[1] < j) stepRange[1] = j
@@ -42,7 +43,6 @@ class Artwork extends Component {
           })
 
         const steps = data.ySteps.slice(Math.max(0, stepRange[0] - 1), stepRange[1] + 1)
-        console.log(steps)
 
         if (steps.length === 0) return (
           <path
@@ -102,11 +102,9 @@ class Artwork extends Component {
         }}
         y={ height + 18}
       >
-        {`${ cleanupLabel(data.title_notice) } - ${ cleanupLabel(data.authors_list) }`}
+        {`${ cleanupLabel(data.title_notice, 50) } - ${ cleanupLabel(data.authors_list, 35) }`}
       </text>
     )
-
-    console.log('woop', data)
 
     return (
       <g
