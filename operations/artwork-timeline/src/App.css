@@ -1,5 +1,13 @@
+html, body {
+  box-sizing: border-box;
+  width: 100%;
+  background-color: #052244;
+  color: white;
+}
+
 .App {
   text-align: center;
+  padding: 50px;
 }
 
 .App-logo {

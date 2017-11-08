@@ -1,45 +1,146 @@
+/*
+
+  FEATURES
+    line colors
+    artwork title
+    event bubbles
+    uncrop visibility
+  QUESTIONS
+    100% reliable accrochage data
+  MISC
+    window resize
+    move width and height to props
+
+*/
+
+
 import React, { Component } from 'react';
-// import logo from './logo.svg';
+import Artwork from './Artwork'
+import { map } from './utils'
+
 import './App.css';
 
 class App extends Component {
   constructor (props) {
     super(props)
     this.state = {
-      data: []
+      artworks: [],
+      timeRange: [10000000000000, 0]
     }
   }
 
   componentWillMount () {}
 
   componentWillReceiveProps (props) {
-    console.log('wow', props)
+    const {
+      timeRange
+    } = this.state
 
-    const data = props.data
-      .filter((d, i) => i < 10)
+
+    const width = this.refs.timelineContainer.clientWidth
+
+    const artworks = props.data
+      .filter((d, i) => i < 1)
+      .map(a => {
+        const operations = a.opt_field
+          .filter(o => {
+            return new Date(o.date).getTime() >= new Date('1/1/1995').getTime()
+          })
+          .sort((a, b) => {
+            return new Date(a.date) - new Date(b.date).getTime()
+          })
+          .map(o => {
+            return {
+              ...o,
+              date: new Date(o.date).getTime()
+            }
+          })
+          return {
+            ...a,
+            operations
+          }
+      })
+
+    timeRange[0] = artworks.reduce((a, b) => {
+      const minOperations = b.operations.reduce((c, d) => {
+        return Math.min(c, new Date(d.date).getTime())
+      }, a)
+      return Math.min(a, minOperations)
+    }, timeRange[0])
+
+    timeRange[1] = artworks.reduce((a, b) => {
+      const maxOperations = b.operations.reduce((c, d) => {
+        return Math.max(c, new Date(d.date).getTime())
+      }, a)
+      return Math.max(a, maxOperations)
+    }, timeRange[1])
+
+    const processedArtworks = artworks.map(a => {
+      const visibilityOperations = a.operations
+        .filter(o => o.opt_code === '212I' || o.opt_code === '213I' || o.opt_code === '212E' || o.opt_code === '213E')
+        .map(o => {
+          const installationType = parseInt(o.opt_code.slice(0, 3)) === 212 ? 'installation' : 'uninstallation'
+          return {
+            date: o.date,
+            type: installationType
+          }
+        })
+
+      let y = 0
+
+      const ySteps = new Array(width).fill(0)
+        .map((v, i) => {
+          const latestX = map(i - 1, 0, width, timeRange[0], timeRange[1])
+          const x = map(i, 0, width, timeRange[0], timeRange[1])
+          const pastOperations = visibilityOperations.filter(o => new Date(o.date).getTime() <= x)
+          const latestOperation = pastOperations[pastOperations.length - 1]
+          if (!!latestOperation && latestOperation.type === 'installation') {
+            // y ++
+            y = Math.min(50, y + 1)
+          } else {
+            // y --
+            y = Math.max(0, y - 1)
+          }
+          return y
+        })
+        .filter((y, i) => i % 10 === 0)
+        .map((y, i) => {
+          return {
+            x: map(i, 0, Math.floor(width / 10), 0, width),
+            y: y
+          }
+        })
+
+      return {
+        ...a,
+        ySteps,
+        visibilityOperations
+      }
+    })
 
     this.setState({
       ...this.state,
-      data
+      artworks: processedArtworks,
+      timeRange
     })
   }
 
   render() {
 
     const {
-      data
+      artworks,
+      timeRange
     } = this.state
 
-    const artworks = data.map((a, i) => {
+    const timelines = artworks.map((a, i) => {
       return (
-        <svg
-          style={{
-            width: '100%',
-            height: 50,
-            backgroundColor: `rgb(${i * 20}, 0, 0)`
-          }}
-        >
-        </svg>
+        <Artwork
+          key={ `artwork-${ i }` }
+          color={ i * 20 }
+          data={ a }
+          timeRange={ timeRange }
+          index={ i }
+        />
       )
     })
 
@@ -48,10 +149,15 @@ class App extends Component {
         <h1>
           Artwork timeline
         </h1>
-        <p className="App-intro">
-          Hello world
-        </p>
-          { artworks }
+        <svg
+          ref="timelineContainer"
+          style={{
+            width: "100%",
+            height: 500,
+          }}
+        >
+          { timelines }
+        </svg>
       </div>
     );
   }
