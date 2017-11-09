@@ -42,19 +42,23 @@ class Node {
 
   update (date, locations, nodes) {
 
+
     let latestOperation = null
     this.operations.some(o => {
       if (o.date > date) {
         return true
       } else {
         latestOperation = o
+        this.active = true
         return false
       }
     })
+    
+    if (!this.active) return null
+
     if (latestOperation !== this.currentOperation) {
       if (!this.currentOperation) {
         this.targetColor.setHSL( Math.random(), 1.0, 0.5 )
-        this.active = true
       }
       const nextLocation = locations.find(l => {
         return l.locationId === latestOperation.opt_branch
@@ -62,7 +66,6 @@ class Node {
       if (!!nextLocation) {
 
         this.currentLocation = nextLocation
-
         if (!!this.currentOperation) this.currentOperation.count --
         nextLocation.count ++
         
@@ -74,7 +77,7 @@ class Node {
           this.position.copy(nextLocation.position.clone().add(offset))
         }
       } else {
-        // console.log('aga')
+        console.log('aga')
         // if (!this.currentOperation) {
         //   console.log('lol')
         //   const defaultLocation = locations.find(l => l.locationId === 'CPINTER_storage')

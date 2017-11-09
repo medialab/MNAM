@@ -72,7 +72,7 @@ class MapApp extends Component {
       nodeGrid: [],
       locations: [],
       currentDate: new Date(0),
-      speed: 1000*60*60*24,
+      speed: 1000 * 60 * 60 * 24,
       width: 100,
       height: 100
     }
@@ -284,19 +284,22 @@ class MapApp extends Component {
 
       // const ratio = Math.floor(neighboringNodes.length / 20)
       const pos = n.update(currentDate, locations, neighboringNodes)
-      const x = Math.floor((pos.x + width / 2) / width * gridResolution)
-      const y = Math.floor((pos.y + height / 2) / height * gridResolution)
-      if (x >= 0 && x < gridResolution && y >= 0 && y < gridResolution && n.active) {
-        newNodeGrid[x][y].push(n)
-        pushedneighboringNodesCount ++
-      }
+      if (!!pos) {
+        // console.log(pos)
+        const x = Math.floor((pos.x + width / 2) / width * gridResolution)
+        const y = Math.floor((pos.y + height / 2) / height * gridResolution)
+        if (x >= 0 && x < gridResolution && y >= 0 && y < gridResolution) {
+          newNodeGrid[x][y].push(n)
+          pushedneighboringNodesCount ++
+        }
 
-      attributes.position.array[i * 3 + 0] = n.position.x
-      attributes.position.array[i * 3 + 1] = n.position.y
-      attributes.position.array[i * 3 + 2] = n.position.z
-      attributes.color.array[i * 4 + 0] = n.color.r
-      attributes.color.array[i * 4 + 1] = n.color.g
-      attributes.color.array[i * 4 + 2] = n.color.b
+        attributes.position.array[i * 3 + 0] = pos.x
+        attributes.position.array[i * 3 + 1] = pos.y
+        attributes.position.array[i * 3 + 2] = pos.z
+        attributes.color.array[i * 3 + 0] = n.color.r
+        attributes.color.array[i * 3 + 1] = n.color.g
+        attributes.color.array[i * 3 + 2] = n.color.b
+      }
     })
     attributes.position.needsUpdate = true
     attributes.color.needsUpdate = true
