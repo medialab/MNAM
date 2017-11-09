@@ -1,12 +1,18 @@
 /*
+  distribution
+  legende
+  ordinates
+  in/out
+  sort
+  overlay
+
 
   FEATURES
     VIZ
-      add date labels
+x     operation types
+      compress layout
+x     scale factor + layout
       sort by highest visibility
-      scroll through sample
-      operation types
-      scale factor + layout
       ==
       add space between stopList and others
       time cursor
@@ -15,15 +21,15 @@
     FILTERING
       only faves
     INTERACTIONS
-      overlay operation
+x     overlay operation
       add and remove fav
   QUESTIONS
-    100% reliable accrochage data
+x   100% reliable accrochage data
   MISC
     window resize
     move width and height to props
   ISSUES
-    year labeling is offset?
+x   year labeling is offset?
     error when not filtering dates
     ==
     removed last operation
@@ -36,6 +42,7 @@
 import React, { Component } from 'react';
 import Artwork from './Artwork'
 import { map, shuffleArray, lerp } from './utils'
+import { cubehelix } from 'd3-color'
 
 import './App.css';
 
@@ -68,7 +75,22 @@ class App extends Component {
         150000000012643
       ],
       height: 50,
-      halfDecadeRange: [2000, 2015]
+      halfDecadeRange: [2000, 2015],
+      colorCodes: 
+        [['210I','211I','212I','213I','214I','215I','216I','220I','221I','241I','242I','260I','261I','262I','270I','271I','299I','730I','740I','750I','760I'],
+        ['210E','211E','212E','213E','216E','220E','221E','230E','240E','241E','242E','244E','250E','260E','261E','262E','270E','280E','281E','282E','290E','299E','730E','740E','750E','760E'],
+        ['301','302','303','304','305','306','307','308','310'],
+        ['321','322'],
+        ['410','420','431','432'],
+        ['510','520'],
+        ['710','720'],
+        ['900','910','911','912','913','920','921','922','930','931','940','970','971','972','973','974','980','990'],
+        ['790','800','810','811','820','821','850','890','891','892'],
+        ['600','610','620','625','630','650','660','680'],
+        ['700','770','771','772','960'],
+        ['950'],
+        ['901']],
+      colorList: []
     }
   }
 
@@ -79,13 +101,24 @@ class App extends Component {
       timeRange,
       artworkCount,
       stopList,
-      height
+      height,
+      colorCodes
     } = this.state
+
 
 
     const width = this.refs.timelineContainer.clientWidth
 
-    // shuffleArray(props.data)
+    shuffleArray(props.data)
+
+    let colorOffset = 1
+    const colorList = new Array(colorCodes.length).fill(0)
+      .map((v, i) => {
+        if (colorOffset === 0) colorOffset += 355 / 2
+        else colorOffset = 0
+        return cubehelix((Math.floor(i / colorCodes.length * 355) + colorOffset) % 355, 1, 0.5)
+      })
+
 
     stopList.reverse()
       .forEach(id => {
@@ -169,8 +202,8 @@ class App extends Component {
             // const direction = dist / Math.abs(dist)
             // acc = Math.pow(Math.abs(dist), 2) * 0.00001 * direction
 
-            if (acc < 0) vel = lerp(vel, 0, 0.9)
-            acc = 0.002
+            // if (acc < 0) vel = lerp(vel, 0, 0.9)
+            // acc = 0.002
 
             // y = lerp(y, height * 2, 0.1)
           } else {
@@ -178,8 +211,8 @@ class App extends Component {
             // const direction = (dist + 1) / Math.abs(dist + 1)
             // acc = Math.pow(Math.abs(dist), 2) * 0.00001 * direction
             
-            if (acc > 0) vel = lerp(vel, 0, 0.5)
-            acc = -0.02
+            // if (acc > 0) vel = lerp(vel, 0, 0.5)
+            // acc = -0.02
 
             // y = lerp(y, 0, 0.1)
           }
@@ -206,11 +239,30 @@ class App extends Component {
       }
     })
 
+    const colorBuckets = {}
+    processedArtworks.forEach(a => {
+      a.operations.forEach(o => {
+
+        colorCodes.some((codes, j) => {
+          if (codes.indexOf(o.opt_code) > -1) {
+            // console.log(j)
+            if (!colorBuckets[j]) colorBuckets[j] = 0
+            colorBuckets[j] ++
+            return true
+          } else return false
+        })
+        
+      })
+    })
+
+    console.log('aga', colorBuckets)
+
     this.setState({
       ...this.state,
       artworks: processedArtworks,
       timeRange,
-      halfDecadeRange
+      halfDecadeRange,
+      colorList
     })
   }
 
@@ -220,7 +272,9 @@ class App extends Component {
       artworks,
       timeRange,
       height,
-      halfDecadeRange
+      halfDecadeRange,
+      colorCodes,
+      colorList
     } = this.state
 
     // if (artworks.length === 0) return (
@@ -236,6 +290,8 @@ class App extends Component {
           timeRange={ timeRange }
           index={ i }
           height={ height }
+          colorCodes={ colorCodes }
+          colorList={ colorList }
         />
       )
     })
@@ -249,7 +305,7 @@ class App extends Component {
       .map((y, i) => {
         const d = new Date()
         d.setYear(y)
-        const x = map(d.getTime(), timeRange[0], timeRange[1], 0, window.innerWidth - 100)
+        const x = map(d.getTime(), timeRange[0], timeRange[1], 0, window.innerWidth - 100) - 50
         return (
           <g
            key={ `yearlabel-${i}` }

@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { map, lerp, cleanupLabel } from './utils'
 import line from 'svg-line'
 
+
 class Artwork extends Component {
   constructor (props) {
     super(props)
@@ -13,7 +14,9 @@ class Artwork extends Component {
       data,
       timeRange,
       index,
-      height
+      height,
+      colorCodes,
+      colorList
     } = this.props
 
     const containerElement = document.querySelector('.App')
@@ -54,7 +57,7 @@ class Artwork extends Component {
           <path
             key={ `artwork-${index}-segment${i}` }
             d={ path(steps) }
-            stroke={ currentOperation.type === 'installation' ? '#ea5a47' : '#4543dd' }
+            stroke={ currentOperation.type === 'installation' ? '#a9a9ff' : '#4543dd' }
             strokeWidth={ 2 }
             fill={ 'transparent' }
           />
@@ -83,14 +86,44 @@ class Artwork extends Component {
         }
         if (Number.isNaN(y)) y = height
 
+        let colorIndex = 0
+        colorCodes.some((codes, j) => {
+          if (codes.indexOf(o.opt_code) > -1) {
+            colorIndex = j
+            return true
+          } else return false
+        })
+
+/*
+            <circle
+              key={ `artwork-${index}-event${i}` }
+              cx={ x }
+              cy={ y }
+              r={ 4 }
+              fill={ currentStatus === 'installation' ? '#a9a9ff' : '#4543dd' }
+            />
+            <circle
+              key={ `artwork-${index}-eventColor${i}` }
+              cx={ x }
+              cy={ y }
+              r={ 5 }
+              fill={ colorList[colorIndex].rgb() }
+            />
+            */
+
+
+
         return (
-          <circle
-            key={ `artwork-${index}-event${i}` }
-            cx={ x }
-            cy={ y }
-            r={ 3 }
-            fill={ currentStatus === 'installation' ? '#ea5a47' : '#4543dd' }
-          />
+          <g>
+            <rect
+              key={ `artwork-${index}-event${i}` }
+              x={x - 2.5}
+              y={y - 4 + (currentStatus === 'installation' ? -5 : 5)}
+              width={5}
+              height={8}
+              fill={ colorList[colorIndex].rgb() }
+            />
+          </g>
         )
       })
 
