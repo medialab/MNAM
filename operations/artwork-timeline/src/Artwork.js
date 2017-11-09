@@ -31,6 +31,11 @@ class Artwork extends Component {
     })
   }
 
+  shouldComponentUpdate (props) {
+    // return props.active && !this.props.active
+    return props.active !== this.props.active
+  }
+
   render () {
     const {
       data,
@@ -39,12 +44,15 @@ class Artwork extends Component {
       height,
       colorCodes,
       colorList,
+      active
     } = this.props
 
     const {
       focused,
       focusedOperation
     } = this.state
+
+    if (!active) return null
 
     const containerElement = document.querySelector('.App')
     const width = containerElement.clientWidth - 100

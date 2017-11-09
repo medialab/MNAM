@@ -1,5 +1,6 @@
 /*
 
+  update data
   zoom
   sort
   filter by domain
@@ -60,7 +61,7 @@ class App extends Component {
     this.state = {
       artworks: [],
       timeRange: [10000000000000, 0],
-      artworkCount: 100,
+      artworkCount: 1000,
       stopList: [
         150000000030351,
         150000000029858,
@@ -112,11 +113,26 @@ class App extends Component {
         'Inventaire réglementaire'
       ],
       colorList: [],
-      colorBuckets: {}
+      colorBuckets: {},
+      viewportRange: [0, 1000]
     }
+
+    this.onScroll = this.onScroll.bind(this)
   }
 
-  componentWillMount () {}
+  componentDidMount () {
+    window.addEventListener('scroll', this.onScroll)
+  }
+
+  onScroll () {
+    const doc = document.documentElement
+    const top = (window.pageYOffset || doc.scrollTop)  - (doc.clientTop || 0)
+    const viewportRange = [top, top + window.innerHeight]
+    this.setState({
+      ...this.state,
+      viewportRange
+    })
+  }
 
   componentWillReceiveProps (props) {
     const {
@@ -126,7 +142,6 @@ class App extends Component {
       height,
       colorCodes
     } = this.state
-
 
 
     const width = this.refs.timelineContainer.clientWidth
@@ -154,6 +169,8 @@ class App extends Component {
         }
       })
 
+
+    /////////////////////////////
     const artworks = props.data
       .filter((d, i) => i < artworkCount)
       .map(a => {
@@ -175,6 +192,8 @@ class App extends Component {
             operations
           }
       })
+    /////////////////////////////
+
 
     timeRange[0] = artworks.reduce((a, b) => {
       const minOperations = b.operations.reduce((c, d) => {
@@ -185,7 +204,6 @@ class App extends Component {
 
     timeRange[1] = Date.now()
 
-    // const ealiestYear = new Date(timeRange[0]).getYear()
 
     const halfDecadeRange = [new Date(timeRange[0]), new Date(timeRange[1])]
     halfDecadeRange[0].setDate(1)
@@ -197,8 +215,6 @@ class App extends Component {
     halfDecadeRange[1].setYear(1900 + halfDecadeRange[1].getYear() - halfDecadeRange[1].getYear() % 5 + 5)
     halfDecadeRange[1] = 1900 + halfDecadeRange[1].getYear()
 
-    // timeRange[0] = prevHalfDecade.getTime()
-    // timeRange[1] = nextHalfDecade.getTime()
 
     const processedArtworks = artworks.map(a => {
       const visibilityOperations = a.operations
@@ -216,38 +232,38 @@ class App extends Component {
       let vel = 0
 
       const ySteps = new Array(width).fill(0)
-        .map((v, i) => {
-          const latestX = map(i - 1, 0, width, timeRange[0], timeRange[1])
-          const x = map(i, 0, width, timeRange[0], timeRange[1])
-          const pastOperations = visibilityOperations.filter(o => new Date(o.date).getTime() <= x)
-          const latestOperation = pastOperations[pastOperations.length - 1]
-          if (!!latestOperation && latestOperation.type === 'installation') {
-            // const dist = height - y
-            // const direction = dist / Math.abs(dist)
-            // acc = Math.pow(Math.abs(dist), 2) * 0.00001 * direction
+        // .map((v, i) => {
+        //   const latestX = map(i - 1, 0, width, timeRange[0], timeRange[1])
+        //   const x = map(i, 0, width, timeRange[0], timeRange[1])
+        //   const pastOperations = visibilityOperations.filter(o => new Date(o.date).getTime() <= x)
+        //   const latestOperation = pastOperations[pastOperations.length - 1]
+        //   if (!!latestOperation && latestOperation.type === 'installation') {
+        //     // const dist = height - y
+        //     // const direction = dist / Math.abs(dist)
+        //     // acc = Math.pow(Math.abs(dist), 2) * 0.00001 * direction
 
-            // if (acc < 0) vel = lerp(vel, 0, 0.9)
-            // acc = 0.002
+        //     // if (acc < 0) vel = lerp(vel, 0, 0.9)
+        //     // acc = 0.002
 
-            // y = lerp(y, height * 2, 0.1)
-          } else {
-            // const dist = - y
-            // const direction = (dist + 1) / Math.abs(dist + 1)
-            // acc = Math.pow(Math.abs(dist), 2) * 0.00001 * direction
+        //     // y = lerp(y, height * 2, 0.1)
+        //   } else {
+        //     // const dist = - y
+        //     // const direction = (dist + 1) / Math.abs(dist + 1)
+        //     // acc = Math.pow(Math.abs(dist), 2) * 0.00001 * direction
             
-            // if (acc > 0) vel = lerp(vel, 0, 0.5)
-            // acc = -0.02
+        //     // if (acc > 0) vel = lerp(vel, 0, 0.5)
+        //     // acc = -0.02
 
-            // y = lerp(y, 0, 0.1)
-          }
-          vel += acc
-          y += vel
-          if (y < 0) {
-            y = 0
-            if (vel < 0) vel = 0
-          }
-          return y
-        })
+        //     // y = lerp(y, 0, 0.1)
+        //   }
+        //   vel += acc
+        //   y += vel
+        //   if (y < 0) {
+        //     y = 0
+        //     if (vel < 0) vel = 0
+        //   }
+        //   return y
+        // })
         .filter((y, i) => i % 5 === 0)
         .map((y, i) => {
           return {
@@ -263,6 +279,7 @@ class App extends Component {
       }
     })
 
+
     const colorBuckets = {}
     processedArtworks.forEach(a => {
       a.operations.forEach(o => {
@@ -277,6 +294,7 @@ class App extends Component {
         
       })
     })
+
 
     this.setState({
       ...this.state,
@@ -298,7 +316,8 @@ class App extends Component {
       colorCodes,
       colorList,
       colorBuckets,
-      colorLabels
+      colorLabels,
+      viewportRange
     } = this.state
 
     // if (artworks.length === 0) return (
@@ -306,18 +325,27 @@ class App extends Component {
     // )
 
     const timelines = artworks.map((a, i) => {
-      return (
-        <Artwork
-          key={ `artwork-${ i }` }
-          color={ i * 20 }
-          data={ a }
-          timeRange={ timeRange }
-          index={ i }
-          height={ height }
-          colorCodes={ colorCodes }
-          colorList={ colorList }
-        />
-      )
+      const originalY = (i + 1) * height
+      const offset = !!this.refs.timelineWrapper ? this.refs.timelineWrapper.offsetTop : 0
+      const active = originalY - height / 2 + offset < viewportRange[1] && originalY + height / 2 + offset > viewportRange[0]
+      
+      if (!active) {
+        return null
+      } else {
+        return (
+          <Artwork
+            key={ `artwork-${ i }` }
+            color={ i * 20 }
+            data={ a }
+            timeRange={ timeRange }
+            index={ i }
+            height={ height }
+            colorCodes={ colorCodes }
+            colorList={ colorList }
+            active={ active }
+          />
+        )
+      }
     })
 
     // console.log('aga', halfDecadeRange, (halfDecadeRange[1] - halfDecadeRange[0])/ 5)
@@ -396,23 +424,28 @@ class App extends Component {
     })
 
     return (
-      <div className="App">
+      <div
+        className="App"
+        onScroll={()=> {console.log('onscroll')}}
+      >
         <h1>
           ARTWORK TIMELINE
         </h1>
         <ul className="legend">
           { legend }
         </ul>
-        <svg
-          ref="timelineContainer"
-          style={{
-            width: "100%",
-            height: artworks.length * height,
-          }}
-        >
-          { yearAxix }
-          { timelines }
-        </svg>
+        <div ref="timelineWrapper">
+          <svg
+            ref="timelineContainer"
+            style={{
+              width: "100%",
+              height: artworks.length * height,
+            }}
+          >
+            { yearAxix }
+            { timelines }
+          </svg>
+        </div>
       </div>
     );
   }

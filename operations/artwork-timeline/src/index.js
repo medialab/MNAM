@@ -1,8 +1,13 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import registerServiceWorker from './registerServiceWorker';
+
+document.scrollTop = 0
+document.body.scrollTop = 0
+document.querySelector('#root').scrollTop = 0
 
 ReactDOM.render(<App />, document.getElementById('root'));
 registerServiceWorker();
