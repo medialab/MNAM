@@ -1,11 +1,9 @@
 /*
 
-  remove unborn nodes
-  remove unknown from locations
-  playback
-  location queues
   sublocations
+  playback
   color coding
+  remove unknown from locations
 
 */
 

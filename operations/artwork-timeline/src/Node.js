@@ -14,7 +14,7 @@ class Node {
     this.update = this.update.bind(this)
 
     this.currentOperation = null
-    this.currentLocation = null
+    this.locationQueue = []
 
     var geometry = new THREE.CircleGeometry( 8, 32 )
     var material = new THREE.MeshBasicMaterial( { color: Math.random()* 0xffffff } )
@@ -65,28 +65,19 @@ class Node {
       })
       if (!!nextLocation) {
 
-        this.currentLocation = nextLocation
+        this.locationQueue.push(nextLocation)
         if (!!this.currentOperation) this.currentOperation.count --
         nextLocation.count ++
         
         this.targetPosition.copy(nextLocation.position)
         if (!this.currentOperation) {
           const theta = Math.random() * Math.PI * 2
-          const r = Math.sqrt(this.size / 2 * this.currentLocation.count) * (1 + Math.random() * 0.5)
+          const r = Math.sqrt(this.size / 2 * nextLocation.count) * (1 + Math.random() * 0.5)
           const offset = new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r)
           this.position.copy(nextLocation.position.clone().add(offset))
         }
       } else {
-        console.log('aga')
-        // if (!this.currentOperation) {
-        //   console.log('lol')
-        //   const defaultLocation = locations.find(l => l.locationId === 'CPINTER_storage')
-        //   const theta = Math.random() * Math.PI * 2
-        //   // const r = 50 + Math.random() * 50
-        //   const r = Math.sqrt(this.size * nextLocation.count) * 1.75
-        //   const offset = new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r)
-        //   this.position.copy(defaultLocation.position.clone().add(offset))
-        // }
+        console.log('oops')
       }
       this.currentOperation = latestOperation
     }
@@ -102,13 +93,16 @@ class Node {
       }
     })
 
-
-    const distanceToTarget = this.position.distanceTo(this.targetPosition)
-    if (!this.currentLocation || distanceToTarget > Math.sqrt(this.size / 3 * this.currentLocation.count)) {
-      const force = this.targetPosition.clone().sub(this.position)
-      force.normalize()
-      force.multiplyScalar(distanceToTarget * this.attractionToTarget)
-      this.acc.add(force)
+    if (this.locationQueue.length > 0) {
+      const distanceToTarget = this.position.distanceTo(this.locationQueue[0].position)
+      if (distanceToTarget > Math.sqrt(this.size / 3 * this.locationQueue[0].count)) {
+        const force = this.locationQueue[0].position.clone().sub(this.position)
+        force.normalize()
+        force.multiplyScalar(distanceToTarget * this.attractionToTarget)
+        this.acc.add(force)
+      } else {
+        this.locationQueue.shift()
+      }
     }
 
     this.vel.add(this.acc)
