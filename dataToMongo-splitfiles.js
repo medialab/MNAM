@@ -5,7 +5,7 @@ var MongoClient = require('mongodb').MongoClient;
 var filesystem = require('fs');
 
 var index = 0; // control index
-var url = 'mongodb://localhost:27017/myproject';
+var url = 'mongodb://localhost:27017/mnam';
 
 var duplicate_count = 0;
 //var objectsToProcess = []; // list of json objects to process
@@ -44,8 +44,12 @@ function insertMedias(artwork, db, callback) {
 function insertAuthors(artwork, db, callback) {
    // console.log(artwork);
     var authors = artwork._source.ua.authors;
+    if( authors && authors.length===1){
+        authors[0].authors_birth_death = artwork._source.ua.artwork.authors_birth_death
+    }
    // console.log('a');
     async.mapSeries(authors, function(author, authorCb) {
+
         db.collection(AUTHOR_COLLECTION).updateOne({_id: author._id}, {
             $set: author,
             $addToSet: {artworks: artwork._id}
@@ -53,6 +57,7 @@ function insertAuthors(artwork, db, callback) {
             upsert: true
         }).then(function(err, res) {
             // not catching errors because possible dupkeys that we don't care about
+
             authorCb(null);
         });
     }, function(err) {
@@ -66,6 +71,7 @@ function insertAuthors(artwork, db, callback) {
 function insertArtwork(artwork, db, callback) {
     // un-nest artwork main information
     var artworkSimplified = artwork._source.ua.artwork;
+
     // store medias as an array of ids instead of complete objects
     artworkSimplified.medias = artwork._source.ua.medias ? 
         artwork._source.ua.medias
@@ -82,6 +88,8 @@ function insertArtwork(artwork, db, callback) {
         : [];
     // keep top-level native artwork id
     artworkSimplified._id = artwork._id;
+    // artworkSimplified.id = artworkSimplified._id;
+    // delete artworkSimplified._id;
     db.collection(ARTWORK_COLLECTION).insert(artworkSimplified, function(err){
     	// not catching errors because possible dupkeys that we don't care about
     	if (err != null) {
@@ -168,7 +176,7 @@ function dataToMongo() {
         function(db, callback) {
             console.log('starting to parse data in json');
             //Make something with split files
-            async.eachLimit(jsonList, 2,
+            async.eachLimit(jsonList, 1,
             	function(file, nestedCallback) {
             		var smallTab = []
             		console.log('parsing '+file);
@@ -180,7 +188,7 @@ function dataToMongo() {
                 	).done(
                 	function(results) {
                 	    //console.log(smallTab.length);
-                	    async.eachLimit(smallTab, 4,
+                	    async.eachLimit(smallTab, 1,
                 		    function(node, nodeCallback) {
                 		        populateDbWithArtwork(node, db, nodeCallback);
                 		    },
