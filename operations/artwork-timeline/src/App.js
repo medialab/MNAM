@@ -1,10 +1,8 @@
 /*
-  distribution
   legende
-  ordinates
-  in/out
-  sort
   overlay
+  sort
+  ordinates
 
 
   FEATURES
@@ -90,7 +88,23 @@ class App extends Component {
         ['700','770','771','772','960'],
         ['950'],
         ['901']],
-      colorList: []
+      colorLabels: [
+        'Déplacement vers localisation interne',
+        'Déplacement vers localisation externe',
+        'Constat oeuvre',
+        'Intervention oeuvre',
+        'Fiche technique - habillage',
+        'Fiche technique - emballage',
+        'Courriers',
+        'Opérations diverses',
+        'Perte ou vol',
+        'Photographies',
+        'Récolement',
+        'Evaluation valeurs d\'assurance',
+        'Inventaire réglementaire'
+      ],
+      colorList: [],
+      colorBuckets: {}
     }
   }
 
@@ -245,7 +259,6 @@ class App extends Component {
 
         colorCodes.some((codes, j) => {
           if (codes.indexOf(o.opt_code) > -1) {
-            // console.log(j)
             if (!colorBuckets[j]) colorBuckets[j] = 0
             colorBuckets[j] ++
             return true
@@ -255,14 +268,13 @@ class App extends Component {
       })
     })
 
-    console.log('aga', colorBuckets)
-
     this.setState({
       ...this.state,
       artworks: processedArtworks,
       timeRange,
       halfDecadeRange,
-      colorList
+      colorList,
+      colorBuckets
     })
   }
 
@@ -274,7 +286,9 @@ class App extends Component {
       height,
       halfDecadeRange,
       colorCodes,
-      colorList
+      colorList,
+      colorBuckets,
+      colorLabels
     } = this.state
 
     // if (artworks.length === 0) return (
@@ -305,7 +319,7 @@ class App extends Component {
       .map((y, i) => {
         const d = new Date()
         d.setYear(y)
-        const x = map(d.getTime(), timeRange[0], timeRange[1], 0, window.innerWidth - 100) - 50
+        const x = map(d.getTime(), timeRange[0], timeRange[1], 0, document.body.clientWidth - 100) - 50 + 19
         return (
           <g
            key={ `yearlabel-${i}` }
@@ -333,11 +347,52 @@ class App extends Component {
         )
       })
 
+    let buckets = new Array(13).fill(0)
+    Object.keys(colorBuckets).forEach(key => {
+      const val = colorBuckets[key]
+      buckets[key] = val
+    })
+    const colorRanking = []
+    for (let i = 0; i < buckets.length; i++){
+      let maxCount = 0
+      let id = -1
+      buckets.forEach((b, j) => {
+        if (b > maxCount) {
+          id = j
+          maxCount = b
+        }
+      })
+      if (id > -1) {
+        colorRanking.push(id)
+        buckets[id] = 0
+      }
+    }
+    const legend = colorRanking.map((id, i) => {
+      return (
+        <li
+          key={`colorlabel-${i}`}
+        >
+          <span
+            style={{
+              width: 13,
+              height: 13,
+              backgroundColor: colorList[id].rgb()
+            }}
+          >
+          </span>
+          { colorLabels[id] }
+        </li>
+      )
+    })
+
     return (
       <div className="App">
         <h1>
           ARTWORK TIMELINE
         </h1>
+        <ul className="legend">
+          { legend }
+        </ul>
         <svg
           ref="timelineContainer"
           style={{

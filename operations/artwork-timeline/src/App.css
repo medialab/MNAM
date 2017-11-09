@@ -40,3 +40,24 @@ html, body {
     /*border: 1px solid #141428;*/
     margin-top: 50px;
   }
+
+  .App .legend {
+    list-style: none;
+    text-align: left;
+    padding: 0;
+    margin-top: 50px;
+  }
+
+    .App .legend li{
+      display: inline-block;
+      margin-right: 25px;
+      color: #8080e8;
+      font-size: 11px;
+      line-height: 18px;
+    }
+
+      .App .legend li span{
+        display: inline-block;
+        margin-right: 12px;
+        vertical-align: sub;
+      }

@@ -94,36 +94,15 @@ class Artwork extends Component {
           } else return false
         })
 
-/*
-            <circle
-              key={ `artwork-${index}-event${i}` }
-              cx={ x }
-              cy={ y }
-              r={ 4 }
-              fill={ currentStatus === 'installation' ? '#a9a9ff' : '#4543dd' }
-            />
-            <circle
-              key={ `artwork-${index}-eventColor${i}` }
-              cx={ x }
-              cy={ y }
-              r={ 5 }
-              fill={ colorList[colorIndex].rgb() }
-            />
-            */
-
-
-
         return (
-          <g>
-            <rect
-              key={ `artwork-${index}-event${i}` }
-              x={x - 2.5}
-              y={y - 4 + (currentStatus === 'installation' ? -5 : 5)}
-              width={5}
-              height={8}
-              fill={ colorList[colorIndex].rgb() }
-            />
-          </g>
+          <rect
+            key={ `artwork-${index}-event${i}` }
+            x={x - 2.5}
+            y={y - 4 + (currentStatus === 'installation' ? -5 : 5)}
+            width={5}
+            height={8}
+            fill={ colorList[colorIndex].rgb() }
+          />
         )
       })
 
@@ -133,7 +112,7 @@ class Artwork extends Component {
           fill: '#8080e8',
           fontSize: 13
         }}
-        y={ height + 18}
+        y={ height - 18}
       >
         {`${!!data.favorite ? '✚ ' : ''}${ cleanupLabel(data.title_notice, 50) } - ${ cleanupLabel(data.authors_list, 35) }`}
       </text>
