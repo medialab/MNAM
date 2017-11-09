@@ -1,16 +1,43 @@
 /*
 
+  forces
+  playback
+  location queues
+  sous-locations
+  color coding
 
 */
 
 
-import React, { Component } from 'react';
+import React, { Component } from 'react'
 import Artwork from './Artwork'
 import { map, shuffleArray, lerp } from './utils'
 import { cubehelix } from 'd3-color'
 import * as THREE from 'three'
 
+import Node from './Node'
+
 import './App.css';
+
+const vertexShader = `
+  attribute float size;
+  varying vec3 vColor;
+  void main() {
+    vColor = color;
+    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+    gl_PointSize = size * ( 300.0 / -mvPosition.z );
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`
+
+const fragmentShader = `
+  uniform sampler2D texture;
+  varying vec3 vColor;
+  void main() {
+    gl_FragColor = vec4( vColor, 1.0 );
+    gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+  }
+`
 
 
 
@@ -39,7 +66,11 @@ class MapApp extends Component {
         150000000023706,
         150000000017432,
         150000000012643
-      ]
+      ],
+      nodes: [],
+      locations: [],
+      currentDate: new Date(0),
+      speed: 1000*60*60*24
     }
 
     this.init = this.init.bind(this)
@@ -104,12 +135,83 @@ class MapApp extends Component {
     renderer.setSize( window.innerWidth, window.innerHeight )
     this.refs.wrapper.appendChild( renderer.domElement )
 
-    console.log(window.innerWidth, window.innerHeight)
+    // var geometry = new THREE.CircleGeometry( 100, 32 )
+    // var material = new THREE.MeshBasicMaterial( { color: 0xffff00, side:THREE.DoubleSide } )
+    // var circle = new THREE.Mesh( geometry, material )
+    // scene.add( circle )
 
-    var geometry = new THREE.CircleGeometry( 100, 32 )
-    var material = new THREE.MeshBasicMaterial( { color: 0xffff00, side:THREE.DoubleSide } )
-    var circle = new THREE.Mesh( geometry, material )
-    scene.add( circle )
+    // const nodes = artworks.map((a, i) => {
+    //   return new Node(a, scene, width, height)
+    // })
+
+    var particleSystem, uniforms, geometry
+    var particles = 100000
+
+    uniforms = {
+      texture:   { value: new THREE.TextureLoader().load( process.env.PUBLIC_URL + '/node.png' ) }
+    }
+
+
+    var shaderMaterial = new THREE.ShaderMaterial( {
+      uniforms:       uniforms,
+      vertexShader:   vertexShader,
+      fragmentShader: fragmentShader,
+      blending:       THREE.AdditiveBlending,
+      depthTest:      false,
+      transparent:    true,
+      vertexColors:   true
+    })
+
+    var radius = 200
+    geometry = new THREE.BufferGeometry()
+
+    var positions = []
+    var colors = []
+    var sizes = []
+
+    var color = new THREE.Color()
+
+    const nodes = artworks.map((a, i) => {
+      const node = new Node(a, scene, width, height, i)
+      positions.push(node.position.x, node.position.y, node.position.z)
+      colors.push(node.color.r, node.color.g, node.color.b)
+      sizes.push(node.size)
+      return node
+    })
+
+    geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) )
+    geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) )
+    geometry.addAttribute( 'size', new THREE.Float32BufferAttribute( sizes, 1 ).setDynamic( true ) )
+
+    particleSystem = new THREE.Points(geometry, shaderMaterial)
+
+    scene.add(particleSystem)
+
+    const locationMap = {}
+    nodes.forEach(n => {
+      n.operations.forEach(o => {
+        if (!locationMap[o.opt_branch]) locationMap[o.opt_branch] = 0 
+        locationMap[o.opt_branch] ++
+      })
+    })
+    console.log('aga', locationMap)
+
+    let theta = 0
+    let rad = 300
+    console.log('aga')
+    const locations = Object.keys(locationMap).map(l => {
+      const location = locationMap[l]
+      const geometry = new THREE.CircleGeometry(50, 32)
+      const material = new THREE.MeshBasicMaterial({color: 0xff0000})
+      const circle = new THREE.Mesh(geometry, material)
+      circle.position.set(Math.cos(theta) * rad, Math.sin(theta) * rad, 0)
+      circle.locationId = l
+      scene.add(circle)
+      theta += Math.PI * 2 / Object.keys(locationMap).length
+      return circle
+    })
+
+    const currentDate = timeRange[0] - 100
 
     this.setState({
       ...this.state,
@@ -118,8 +220,13 @@ class MapApp extends Component {
       height,
       scene,
       camera,
-      renderer
+      renderer,
+      nodes,
+      locations,
+      currentDate,
+      particleSystem
     })
+
 
     this.tick()
   }
@@ -128,7 +235,15 @@ class MapApp extends Component {
     const {
       scene,
       camera,
-      renderer
+      renderer,
+      particleSystem,
+      nodes,
+      locations,
+      speed
+    } = this.state
+
+    let {
+      currentDate
     } = this.state
 
     if (!renderer) {
@@ -136,8 +251,25 @@ class MapApp extends Component {
       return
     }
 
+    const attributes = particleSystem.geometry.attributes
+
+    nodes.forEach((n, i) => {
+      n.update(currentDate, locations)
+      attributes.position.array[i * 3 + 0] = n.position.x
+      attributes.position.array[i * 3 + 1] = n.position.y
+      attributes.position.array[i * 3 + 2] = n.position.z
+    })
+    attributes.position.needsUpdate = true
+
     renderer.render(scene, camera)
+    
+    this.setState({
+      ...this.state,
+      currentDate: currentDate + speed
+    })
+    
     requestAnimationFrame(this.tick)
+
   }
 
   render () {
