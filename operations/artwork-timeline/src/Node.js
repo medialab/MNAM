@@ -60,19 +60,24 @@ class Node {
       if (!this.currentOperation) {
         this.targetColor.setHSL( Math.random(), 1.0, 0.5 )
       }
-      const nextLocation = locations.find(l => {
-        return l.locationId === latestOperation.opt_branch
+      let nextLocation = locations.find(l => {
+        return l.id === latestOperation.opt_branch
       })
-      if (!!nextLocation) {
 
+      if (!!nextLocation) {
         this.locationQueue.push(nextLocation)
+        if (nextLocation.children.length > 0 && Math.random() < 0.5) {
+          nextLocation = nextLocation.children[Math.floor(Math.random() * nextLocation.children.length)]
+          this.locationQueue.push(nextLocation)
+        }
+
         if (!!this.currentOperation) this.currentOperation.count --
         nextLocation.count ++
         
         this.targetPosition.copy(nextLocation.position)
         if (!this.currentOperation) {
           const theta = Math.random() * Math.PI * 2
-          const r = Math.sqrt(this.size / 2 * nextLocation.count) * (1 + Math.random() * 0.5)
+          const r = nextLocation.rad * (1 + Math.random() * 0.5)
           const offset = new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r)
           this.position.copy(nextLocation.position.clone().add(offset))
         }
@@ -95,7 +100,7 @@ class Node {
 
     if (this.locationQueue.length > 0) {
       const distanceToTarget = this.position.distanceTo(this.locationQueue[0].position)
-      if (distanceToTarget > Math.sqrt(this.size / 3 * this.locationQueue[0].count)) {
+      if (distanceToTarget > this.locationQueue[0].rad) {
         const force = this.locationQueue[0].position.clone().sub(this.position)
         force.normalize()
         force.multiplyScalar(distanceToTarget * this.attractionToTarget)

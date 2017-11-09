@@ -1,9 +1,11 @@
 /*
 
   sublocations
-  playback
+  location label
   color coding
+  playback
   remove unknown from locations
+  location theta per locationMap distribution
 
 */
 
@@ -15,6 +17,7 @@ import { cubehelix } from 'd3-color'
 import * as THREE from 'three'
 
 import Node from './Node'
+import Location from './Location'
 
 import './App.css';
 
@@ -121,7 +124,7 @@ class MapApp extends Component {
           }
       })
 
-    console.log(artworks.length)
+    console.log(artworks.length, 'artworks loaded')
 
     timeRange[0] = artworks.reduce((a, b) => {
       const minOperations = b.operations.reduce((c, d) => {
@@ -197,16 +200,10 @@ class MapApp extends Component {
     let theta = 0
     let rad = 300
     const locations = Object.keys(locationMap).map(l => {
-      const location = locationMap[l]
-      const geometry = new THREE.CircleGeometry(50, 32)
-      const material = new THREE.MeshBasicMaterial({color: 0xff0000})
-      const circle = new THREE.Mesh(geometry, material)
-      circle.position.set(Math.cos(theta) * rad, Math.sin(theta) * rad, 0)
-      circle.locationId = l
-      circle.count = 0
-      // scene.add(circle)
+      const position = new THREE.Vector3(Math.cos(theta) * rad, Math.sin(theta) * rad, 0)
+      const location = new Location(l, position)
       theta += Math.PI * 2 / Object.keys(locationMap).length
-      return circle
+      return location
     })
 
     const currentDate = timeRange[0] - 100
@@ -252,9 +249,13 @@ class MapApp extends Component {
       return
     }
 
+    locations.forEach(l => {
+      l.update()
+    })
+
     const attributes = particleSystem.geometry.attributes
 
-    const gridResolution = 60
+    const gridResolution = 50
     const newNodeGrid = new Array(gridResolution)
       .fill(null)
       .map(row => new Array(gridResolution)
