@@ -1,12 +1,34 @@
 import React, { Component } from 'react'
 import { map, lerp, cleanupLabel } from './utils'
 import line from 'svg-line'
+import codeLabels from './codeLabels.json'
 
 
 class Artwork extends Component {
   constructor (props) {
     super(props)
-    this.state = {}
+    this.focus = this.focus.bind(this)
+    this.unfocus = this.unfocus.bind(this)
+    this.state = {
+      focused: -1,
+      focusedOperation: null
+    }
+  }
+
+  focus (x, code) {
+    this.setState({
+      ...this.state,
+      focused: x,
+      focusedOperation: code
+    })
+  }
+
+  unfocus () {
+    this.setState({
+      ...this.state,
+      focused: -1,
+      focusedOperation: null
+    })
   }
 
   render () {
@@ -16,8 +38,13 @@ class Artwork extends Component {
       index,
       height,
       colorCodes,
-      colorList
+      colorList,
     } = this.props
+
+    const {
+      focused,
+      focusedOperation
+    } = this.state
 
     const containerElement = document.querySelector('.App')
     const width = containerElement.clientWidth - 100
@@ -102,6 +129,8 @@ class Artwork extends Component {
             width={5}
             height={8}
             fill={ colorList[colorIndex].rgb() }
+            onMouseOver={ () => {this.focus(x - 2.5, o.opt_code)} }
+            onMouseOut={ this.unfocus }
           />
         )
       })
@@ -118,6 +147,32 @@ class Artwork extends Component {
       </text>
     )
 
+    const overlay = focused > -1 ? 
+      (
+        <g
+          style={{
+            transform: `translate(${focused}px, 15px)`
+          }}
+        >
+          <rect
+            fill={'black'}
+            width={275}
+            height={20}
+            x={-275/2}
+          />
+          <text
+            fill={'white'}
+            fontSize={11}
+            y={14}
+            textAnchor={'middle'}
+          >
+            { codeLabels[focusedOperation] }
+          </text>
+        </g>
+      ) : (
+        null
+      )
+
     return (
       <g
         style={{
@@ -127,6 +182,7 @@ class Artwork extends Component {
         { timelinePath }
         { bubbles }
         { label }
+        { overlay }
       </g>
     )
   }

@@ -1,5 +1,14 @@
 /*
-  legende
+
+  overlay
+  zoom
+  sort
+  filter by domain
+  filter by artist
+  sort by operation number
+  sort by time spent on display
+
+
   overlay
   sort
   ordinates
@@ -130,7 +139,7 @@ class App extends Component {
       .map((v, i) => {
         if (colorOffset === 0) colorOffset += 355 / 2
         else colorOffset = 0
-        return cubehelix((Math.floor(i / colorCodes.length * 355) + colorOffset) % 355, 1, 0.5)
+        return cubehelix((Math.floor(i / colorCodes.length * 355 / 2) + colorOffset) % 355, 1, 0.5)
       })
 
 
@@ -141,6 +150,8 @@ class App extends Component {
           artwork.favorite = true
           const oldID = props.data.indexOf(artwork)
           props.data.move(oldID, 0)
+        } else {
+          console.log(id)
         }
       })
 
@@ -319,7 +330,7 @@ class App extends Component {
       .map((y, i) => {
         const d = new Date()
         d.setYear(y)
-        const x = map(d.getTime(), timeRange[0], timeRange[1], 0, document.body.clientWidth - 100) - 50 + 19
+        const x = map(d.getTime(), timeRange[0], timeRange[1], 0, document.body.clientWidth - 100) - 50
         return (
           <g
            key={ `yearlabel-${i}` }
