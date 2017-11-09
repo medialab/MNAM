@@ -1,6 +1,5 @@
 /*
 
-  overlay
   zoom
   sort
   filter by domain
@@ -151,7 +150,7 @@ class App extends Component {
           const oldID = props.data.indexOf(artwork)
           props.data.move(oldID, 0)
         } else {
-          console.log(id)
+          // console.log(id)
         }
       })
 
