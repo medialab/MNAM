@@ -254,7 +254,7 @@ class MapApp extends Component {
     const attributes = particleSystem.geometry.attributes
 
     nodes.forEach((n, i) => {
-      n.update(currentDate, locations)
+      n.update(currentDate, locations, nodes)
       attributes.position.array[i * 3 + 0] = n.position.x
       attributes.position.array[i * 3 + 1] = n.position.y
       attributes.position.array[i * 3 + 2] = n.position.z

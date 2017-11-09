@@ -30,12 +30,15 @@ class Node {
 
     this.index = i
 
+    this.acc = new THREE.Vector3()
+    this.vel = new THREE.Vector3()
+    this.damping = 0.85
+    this.attractionToTarget = 0.005
+
   }
 
-  update (date, locations) {
-    // for (let i = this.operationIndex; i < this.operations.length; i++) {
+  update (date, locations, nodes) {
 
-    // }
     let latestOperation = null
     this.operations.some(o => {
       if (o.date > date) {
@@ -55,7 +58,31 @@ class Node {
       }
     }
 
-    this.position.lerp(this.targetPosition, 0.15)
+    nodes.forEach(n => {
+      if (n !== this) {
+        if (this.position.distanceTo(n.position) < this.size) {
+          const distanceToTarget = this.position.distanceTo(n.position)
+          const force = n.position.clone().sub(this.position)
+          force.negate()
+          force.normalize()
+          force.multiplyScalar((this.size - distanceToTarget) * 0.01)
+          this.acc.add(force)
+        }
+      }
+    })
+
+    const distanceToTarget = this.position.distanceTo(this.targetPosition)
+    const force = this.targetPosition.clone().sub(this.position)
+    force.normalize()
+    force.multiplyScalar(distanceToTarget * this.attractionToTarget)
+    this.acc.add(force)
+
+    this.vel.add(this.acc)
+    this.position.add(this.vel)
+    this.acc.set(0, 0, 0)
+    this.vel.multiplyScalar(this.damping)
+
+    // this.position.lerp(this.targetPosition, 0.15)
 
   }
 }
