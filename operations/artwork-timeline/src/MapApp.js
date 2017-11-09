@@ -8,6 +8,7 @@ import React, { Component } from 'react';
 import Artwork from './Artwork'
 import { map, shuffleArray, lerp } from './utils'
 import { cubehelix } from 'd3-color'
+import * as THREE from 'three'
 
 import './App.css';
 
@@ -42,6 +43,7 @@ class MapApp extends Component {
     }
 
     this.init = this.init.bind(this)
+    this.tick = this.tick.bind(this)
   }
 
   componentDidMount () {
@@ -58,21 +60,6 @@ class MapApp extends Component {
 
     const width = document.getElementById('root').clientWidth
     const height = document.getElementById('root').clientHeight
-
-    // shuffleArray(props.data)
-
-    // stopList.reverse()
-    //   .forEach(id => {
-    //     const artwork = props.data.find(a => a._id === id)
-    //     if (!!artwork) {
-    //       artwork.favorite = true
-    //       const oldID = props.data.indexOf(artwork)
-    //       props.data.move(oldID, 0)
-    //     } else {
-    //       // console.log(id)
-    //     }
-    //   })
-
 
     const artworks = props.data
       .filter((d, i) => i < artworkCount)
@@ -105,15 +92,55 @@ class MapApp extends Component {
 
     timeRange[1] = Date.now()
 
+
+    // THREE.js
+
+    var scene = new THREE.Scene()
+    var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 )
+    camera.position.set(0, 0, (height/2.0) / Math.tan(Math.PI*35.0 / 180.0))
+    camera.lookAt(new THREE.Vector3(0, 0, 0))
+
+    var renderer = new THREE.WebGLRenderer()
+    renderer.setSize( window.innerWidth, window.innerHeight )
+    this.refs.wrapper.appendChild( renderer.domElement )
+
+    console.log(window.innerWidth, window.innerHeight)
+
+    var geometry = new THREE.CircleGeometry( 100, 32 )
+    var material = new THREE.MeshBasicMaterial( { color: 0xffff00, side:THREE.DoubleSide } )
+    var circle = new THREE.Mesh( geometry, material )
+    scene.add( circle )
+
     this.setState({
       ...this.state,
       timeRange,
       width,
-      height
+      height,
+      scene,
+      camera,
+      renderer
     })
+
+    this.tick()
   }
 
-  render() {
+  tick () {
+    const {
+      scene,
+      camera,
+      renderer
+    } = this.state
+
+    if (!renderer) {
+      requestAnimationFrame(this.tick)
+      return
+    }
+
+    renderer.render(scene, camera)
+    requestAnimationFrame(this.tick)
+  }
+
+  render () {
 
     const {
       width,
@@ -126,11 +153,11 @@ class MapApp extends Component {
     return (
       <div
         className="Map"
+        ref="wrapper"
       >
-        <h1>Artwork map</h1>
       </div>
-    );
+    )
   }
 }
 
-export default MapApp;
+export default MapApp
