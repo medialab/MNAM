@@ -1,11 +1,46 @@
-
-
 class TextFields(object):
-	def __init__(self, theme, ico, mov, mat):
-		self._theme = theme
-		self._ico = ico
-		self._mov = mov
-		self._mat = mat
+	def __init__(self):
+		self._id = ''
+		self._theme = ''
+		self._ico = ''
+		self._mov = ''
+		self._mat = ''
+
+
+	def update(self, fields):
+		
+		from utils import tokenize
+		
+		assert (len(fields) == 5), 'Cant update fields. Wrong array len.'
+		self._id = fields[0]
+		self._theme = tokenize(fields[2])
+		self._ico = tokenize(fields[3])
+		self._mov = tokenize(fields[1])
+		self._mat = tokenize(fields[4])
+
+
+	def display(self):
+		'''
+			Display TextFields attributes
+		'''
+		print('id: \t\t',self._id) 
+		print('thematique:\t', self._theme)
+		print('iconographique:\t', self._ico)
+		print('mouvements:\t', self._mov)
+		print('materiaux:\t', self._mat)
+
+
+def join_tokens(self):
+	'''
+		Each attribute is a list of tokens. In order to use scikit-learn
+		function, we need to join those tokens.
+	'''
+	self.theme = ' '.join(self._theme)
+	self.ico = ' '.join(self._ico)
+	self.mov = ' '.join(self._mov)
+	self.mat = ' '.join(self._mat)
+
+
 
 	@property
 	def theme(self):
@@ -38,3 +73,11 @@ class TextFields(object):
 	@mat.setter
 	def mat(self, mat):
 		self._mat = mat
+
+	@property
+	def id(self):
+		return self._id
+
+	@id.setter
+	def id(self, id):
+		self._id = id
