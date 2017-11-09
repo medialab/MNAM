@@ -28,7 +28,9 @@ class Location {
     this.rad = Math.sqrt(this.nodeSize / 2 * this.count)
     let theta = 0
     this.children.forEach(c => {
-      c.position = this.position.clone().add(new THREE.Vector3(Math.cos(theta) * this.rad * 2, Math.sin(theta) * this.rad * 2, 0))
+      c.update()
+      const r = (this.rad + c.rad + 25) * 2
+      c.position.copy(this.position.clone().add(new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r, 0)))
       theta += Math.PI * 2 / this.children.length
     })
   }

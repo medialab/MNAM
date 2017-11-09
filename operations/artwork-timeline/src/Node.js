@@ -26,7 +26,6 @@ class Node {
     this.color = new THREE.Color(0x000000)
     this.size = 10
 
-    this.targetPosition = this.position.clone()
     this.targetColor = this.color.clone()
 
     this.index = i
@@ -37,6 +36,7 @@ class Node {
     this.attractionToTarget = 0.01
     this.nodeRepulsion = 0.001
     this.active = false
+    this.firstRun = true
 
   }
 
@@ -66,15 +66,19 @@ class Node {
 
       if (!!nextLocation) {
         this.locationQueue.push(nextLocation)
-        if (nextLocation.children.length > 0 && Math.random() < 0.5) {
-          nextLocation = nextLocation.children[Math.floor(Math.random() * nextLocation.children.length)]
-          this.locationQueue.push(nextLocation)
-        }
 
-        if (!!this.currentOperation) this.currentOperation.count --
+        if (nextLocation.children.length > 0 && Math.random() < 0.5) {
+          if (!this.firstRun) {
+            nextLocation = nextLocation.children[Math.floor(Math.random() * nextLocation.children.length)]
+            this.locationQueue.unshift(nextLocation)
+          } else {
+            nextLocation = nextLocation.children[Math.floor(Math.random() * nextLocation.children.length)]
+            this.locationQueue = [nextLocation]
+          }
+        }
         nextLocation.count ++
-        
-        this.targetPosition.copy(nextLocation.position)
+        nextLocation.update()
+
         if (!this.currentOperation) {
           const theta = Math.random() * Math.PI * 2
           const r = nextLocation.rad * (1 + Math.random() * 0.5)
@@ -100,13 +104,15 @@ class Node {
 
     if (this.locationQueue.length > 0) {
       const distanceToTarget = this.position.distanceTo(this.locationQueue[0].position)
-      if (distanceToTarget > this.locationQueue[0].rad) {
+      if (distanceToTarget > this.locationQueue[0].rad / 2) {
         const force = this.locationQueue[0].position.clone().sub(this.position)
         force.normalize()
         force.multiplyScalar(distanceToTarget * this.attractionToTarget)
         this.acc.add(force)
       } else {
+        this.locationQueue[0].count --
         this.locationQueue.shift()
+        if (!!this.locationQueue[0]) this.locationQueue[0].count ++
       }
     }
 
@@ -116,6 +122,8 @@ class Node {
     this.vel.multiplyScalar(this.damping)
 
     this.color.lerp(this.targetColor, 0.15)
+
+    this.firstRun = false
 
     return this.position
 

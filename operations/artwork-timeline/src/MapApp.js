@@ -1,8 +1,11 @@
+
 /*
 
-  sublocations
+  swing by parent location when going somewhere else
+  children position doesn't update?
   location label
   color coding
+
   playback
   remove unknown from locations
   location theta per locationMap distribution
