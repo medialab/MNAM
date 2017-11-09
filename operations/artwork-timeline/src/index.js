@@ -3,8 +3,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
+import MapApp from './MapApp';
 import registerServiceWorker from './registerServiceWorker';
-import { HashRouter, Switch, Route, Link } from 'react-router-dom'
+import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom'
 
 
 // import { Router, Route, IndexRoute } from 'react-router'
@@ -23,22 +24,25 @@ client.onload = function() {
   const data = JSON.parse(client.responseText)
   ReactDOM.render(
     (
-      <HashRouter>
+      <Router>
         <Switch>
           <Route 
+            exact
             path='/'
             render={(props) => <App data={ data }/>} 
           />
           <Route 
+            exact
             path='/timeline'
             render={(props) => <App data={ data }/>} 
           />
           <Route 
+            exact
             path='/map'
-            render={(props) => <App data={ data }/>} 
+            render={(props) => <MapApp data={ data }/>} 
           />
         </Switch>
-      </HashRouter>
+      </Router>
     ),
     rootElement
   )

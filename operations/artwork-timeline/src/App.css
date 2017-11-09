@@ -63,3 +63,10 @@ html, body {
         margin-right: 12px;
         vertical-align: sub;
       }
+
+.Map {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background: red;
+}

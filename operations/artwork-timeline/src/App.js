@@ -56,7 +56,7 @@ class App extends Component {
     this.state = {
       artworks: [],
       timeRange: [10000000000000, 0],
-      artworkCount: 100,
+      artworkCount: 10000,
       stopList: [
         150000000030351,
         150000000029858,
@@ -140,7 +140,7 @@ class App extends Component {
       colorCodes
     } = this.state
 
-    const width = document.getElementById('root').clientWidth
+    const width = document.getElementById('root').clientWidth - 100
 
     shuffleArray(props.data)
 
@@ -323,7 +323,7 @@ class App extends Component {
     const timelines = artworks.map((a, i) => {
       const originalY = (i + 1) * height
       const offset = !!this.refs.timelineWrapper ? this.refs.timelineWrapper.offsetTop : 0
-      const active = originalY - height / 2 + offset < viewportRange[1] && originalY + height / 2 + offset > viewportRange[0]
+      const active = originalY - height / 2 + offset < viewportRange[1] && originalY + height + offset > viewportRange[0]
       
       if (!active) {
         return null

@@ -31,9 +31,9 @@ class Artwork extends Component {
     })
   }
 
-  shouldComponentUpdate (props) {
+  shouldComponentUpdate (props, state) {
     // return props.active && !this.props.active
-    return props.active !== this.props.active
+    return props.active !== this.props.active || this.state.focused !== state.focused
   }
 
   render () {
