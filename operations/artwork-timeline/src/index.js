@@ -4,12 +4,15 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import registerServiceWorker from './registerServiceWorker';
+import { HashRouter, Switch, Route, Link } from 'react-router-dom'
+
+
+// import { Router, Route, IndexRoute } from 'react-router'
 
 document.scrollTop = 0
 document.body.scrollTop = 0
 document.querySelector('#root').scrollTop = 0
 
-ReactDOM.render(<App />, document.getElementById('root'));
 registerServiceWorker();
 
 var client = new XMLHttpRequest()
@@ -19,9 +22,24 @@ client.onload = function() {
   const rootElement = document.getElementById('root')
   const data = JSON.parse(client.responseText)
   ReactDOM.render(
-    <App 
-      data={ data }
-    />,
+    (
+      <HashRouter>
+        <Switch>
+          <Route 
+            path='/'
+            render={(props) => <App data={ data }/>} 
+          />
+          <Route 
+            path='/timeline'
+            render={(props) => <App data={ data }/>} 
+          />
+          <Route 
+            path='/map'
+            render={(props) => <App data={ data }/>} 
+          />
+        </Switch>
+      </HashRouter>
+    ),
     rootElement
   )
 }

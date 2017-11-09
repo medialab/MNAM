@@ -1,17 +1,12 @@
 /*
 
-  update data
+  filter by material
+  fix time on display  
+  focus on one artwork
+  sort by time on display
+  filter by exhibition
+  filter by medium
   zoom
-  sort
-  filter by domain
-  filter by artist
-  sort by operation number
-  sort by time spent on display
-
-
-  overlay
-  sort
-  ordinates
 
 
   FEATURES
@@ -61,7 +56,7 @@ class App extends Component {
     this.state = {
       artworks: [],
       timeRange: [10000000000000, 0],
-      artworkCount: 1000,
+      artworkCount: 100,
       stopList: [
         150000000030351,
         150000000029858,
@@ -114,14 +109,16 @@ class App extends Component {
       ],
       colorList: [],
       colorBuckets: {},
-      viewportRange: [0, 1000]
+      viewportRange: [0, 1000],
     }
 
     this.onScroll = this.onScroll.bind(this)
+    this.init = this.init.bind(this)
   }
 
   componentDidMount () {
     window.addEventListener('scroll', this.onScroll)
+    if (Object.keys(this.props).length > 0) this.init(this.props)
   }
 
   onScroll () {
@@ -134,7 +131,7 @@ class App extends Component {
     })
   }
 
-  componentWillReceiveProps (props) {
+  init (props) {
     const {
       timeRange,
       artworkCount,
@@ -143,8 +140,7 @@ class App extends Component {
       colorCodes
     } = this.state
 
-
-    const width = this.refs.timelineContainer.clientWidth
+    const width = document.getElementById('root').clientWidth
 
     shuffleArray(props.data)
 
