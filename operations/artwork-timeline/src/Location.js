@@ -15,10 +15,15 @@ class Location {
     this.addChildren = this.addChildren.bind(this)
     this.setLayout = this.setLayout.bind(this)
     this.setFinalRad = this.setFinalRad.bind(this)
+
+    this.theta = 0
+    this.thetaOffset = 0
+    this.parent = null
   }
 
   addChildren (l) {
     this.children.push(l)
+    l.parent = this
   }
 
   setFinalRad () {
@@ -26,10 +31,16 @@ class Location {
     this.finalRad = Math.max(35, Math.sqrt(this.nodeSize / 2 * operationCount))
   }
 
-  setLayout (origin, theta, rad) {
+  setLayout (origin, theta, rad, thetaOffset) {
     this.position.copy(origin.add(new THREE.Vector3(Math.cos(theta) * rad, Math.sin(theta) * rad, 0)))
+    
+    this.theta = theta
+    this.thetaOffset = thetaOffset * 2
+
+    let t = theta - this.thetaOffset / 1.5
     this.children.forEach(c => {
-      c.setLayout (this.position.clone(), 0, 0)
+      c.setLayout (this.position.clone(), t, 30)
+      t += this.thetaOffset / this.children.length
     })
 
     // if (this.children.length > 0) {
@@ -39,13 +50,16 @@ class Location {
   }
 
   update () {
-    this.rad = Math.sqrt(this.nodeSize / 4 * this.count)
-    let theta = 0
+    this.rad = Math.max(this.children.length > 0 ? 35 : 10, Math.sqrt(this.nodeSize / 4 * this.count))
+    
+    let theta = this.theta - this.thetaOffset / 2
+
     this.children.forEach(c => {
+      theta += this.thetaOffset / this.children.length / 2
       c.update()
-      const r = (this.rad + c.rad + 25)
+      const r = (this.rad + c.rad) * 1.2 + 35
       c.position.copy(this.position.clone().add(new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r, 0)))
-      theta += Math.PI * 2 / this.children.length
+      theta += this.thetaOffset / this.children.length / 2
     })
   }
 }

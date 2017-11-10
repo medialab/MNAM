@@ -1,11 +1,9 @@
 
 /*
 
-  location radius
-  better layout
+  swing by parent location when going somewhere else
   color coding
   sort colors in locations
-  swing by parent location when going somewhere else
 
   playback
   remove unknown from locations
@@ -260,7 +258,7 @@ class MapApp extends Component {
 
         const thetaOffset = l.finalRad / allRads * Math.PI * 2
         theta += thetaOffset / 2
-        l.setLayout(new THREE.Vector3(), theta, rad)
+        l.setLayout(new THREE.Vector3(0, -50, 0), theta, rad, thetaOffset)
         theta += thetaOffset / 2
       })
 
@@ -401,10 +399,19 @@ class MapApp extends Component {
       .map((l, i) => {
         const theta = Math.atan2(l.position.x, l.position.y)
         const rad = l.rad + 25
+        const x = l.position.x + width / 2
+        const y = height - (l.position.y + height / 2)
+            /*<line
+              x1={ 0 }
+              y1={ 0 }
+              x2={ Math.cos(theta) * rad }
+              y2={ Math.sin(theta) * rad}
+              stroke={ 'rgba(255, 255, 255, 0.2)' }
+            />*/
         return (
           <g
             key={ `locationLabel-${i}` }
-            transform={ `translate(${l.position.x + width / 2}, ${height - (l.position.y + height / 2)})` }
+            transform={ `translate(${x}, ${y})` }
           >
             <circle
               cx={ 0 }
@@ -413,13 +420,17 @@ class MapApp extends Component {
               stroke={ 'rgba(255, 255, 255, 0.2)' }
               fill={ 'transparent' }
             />
-            <line
-              x1={ 0 }
-              y1={ 0 }
-              x2={ Math.cos(theta) * rad }
-              y2={ Math.sin(theta) * rad}
-              stroke={ 'rgba(255, 255, 255, 0.2)' }
-            />
+            { !!l.parent &&
+              (
+                <line
+                  x1={ 0 }
+                  y1={ 0 }
+                  x2={ l.parent.position.x - x + width / 2 }
+                  y2={ height - (l.parent.position.y + height / 2)  - y }
+                  stroke={ 'rgba(255, 255, 255, 0.2)' }
+                />
+              )
+            }
             <text
               fill={'white'}
               fontSize={11}
