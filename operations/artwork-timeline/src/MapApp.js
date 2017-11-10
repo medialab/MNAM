@@ -1,11 +1,10 @@
 
 /*
 
-
-  children position doesn't update?
-  new data  
   location label
+  children position doesn't update?
   color coding
+  sort colors in locations
 
   swing by parent location when going somewhere else
   playback
@@ -80,7 +79,8 @@ class MapApp extends Component {
       currentDate: new Date(0),
       speed: 1000 * 60 * 60 * 24,
       width: 100,
-      height: 100
+      height: 100,
+      operationTotal: 0
     }
 
     this.init = this.init.bind(this)
@@ -142,13 +142,14 @@ class MapApp extends Component {
 
 
     var scene = new THREE.Scene()
-    var camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 )
-    camera.position.set(0, 0, (height/2.0) / Math.tan(Math.PI*35.0 / 180.0))
+    var camera = new THREE.PerspectiveCamera( 60, width / height, 0.1, 1000 )
+    // camera.position.set(0, 0, (height/2.0) / Math.tan(Math.PI*60.0 / 180.0))
+    camera.position.set(0, 0, (height/2.0) / Math.tan(Math.PI*30.0/180.0))
     camera.lookAt(new THREE.Vector3(0, 0, 0))
 
     var renderer = new THREE.WebGLRenderer()
-    renderer.setSize( window.innerWidth, window.innerHeight )
-    this.refs.wrapper.appendChild( renderer.domElement )
+    renderer.setSize(width, height)
+    this.refs.wrapper.appendChild(renderer.domElement)
 
     var particleSystem, uniforms, geometry
     var particles = 100000
@@ -156,7 +157,6 @@ class MapApp extends Component {
     uniforms = {
       texture:   { value: new THREE.TextureLoader().load( process.env.PUBLIC_URL + '/node.png' ) }
     }
-
 
     var shaderMaterial = new THREE.ShaderMaterial( {
       uniforms:       uniforms,
@@ -244,7 +244,8 @@ class MapApp extends Component {
         l.setLayout(new THREE.Vector3(), theta, rad)
         const locOperationCount = l.total + l.children.reduce((a, b) => a + b.total, 0)
         // console.log('aga', l.children.reduce((a, b) => a + b.total, 0))
-        theta += map(Math.sqrt(locOperationCount), 0, Math.sqrt(operationTotal), 0, Math.PI * 2)
+        // theta += map(Math.sqrt(locOperationCount), 0, Math.sqrt(operationTotal), 0, Math.PI * 2)
+        theta += Math.PI * 2 / locations.length
       })
 
     // console.log('test', locations
@@ -264,7 +265,8 @@ class MapApp extends Component {
       nodes,
       locations,
       currentDate,
-      particleSystem
+      particleSystem,
+      operationTotal
     })
 
 
@@ -370,14 +372,64 @@ class MapApp extends Component {
       height,
       artworks,
       timeRange,
+      locations,
+      operationTotal
     } = this.state
 
+    const locationLabels = locations.map((l, i) => {
+      const theta = Math.atan2(l.position.x, l.position.y)
+      const rad = l.rad * 2
+      return (
+        <g
+          key={ `locationLabel-${i}` }
+          transform={ `translate(${l.position.x + width / 2}, ${height - (l.position.y + height / 2)})` }
+        >
+          <line
+            x1={ 0 }
+            y1={ 0 }
+            x2={ Math.cos(theta) * rad }
+            y2={ Math.sin(theta) * rad}
+            stroke={ 'rgba(255, 255, 255, 0.2)' }
+          />
+          <text
+            fill={'white'}
+            fontSize={11}
+            x={ Math.cos(theta) * rad }
+            y={ Math.sin(theta) * rad}
+            textAnchor={ 'middle' }
+            alignmentBaseline={ 'central' }
+          >
+            { l.id }
+          </text>
+        </g>
+      )
+      // return (
+
+      //   <div
+      //     style={{
+      //       color: 'white',
+      //       ,
+      //       fontSize: 11,
+      //       position: 'absolute'
+      //     }}
+      //   >
+      //     
+      //   </div>
+      // )
+    })
 
     return (
       <div
         className="Map"
         ref="wrapper"
       >
+        <svg
+          className="domOverlay"
+          ref="domOverlay"
+        >
+
+          { locationLabels }
+        </svg>
       </div>
     )
   }
