@@ -413,13 +413,16 @@ class MapApp extends Component {
             key={ `locationLabel-${i}` }
             transform={ `translate(${x}, ${y})` }
           >
-            <circle
-              cx={ 0 }
-              cy={ 0 }
-              r={ rad / 1.1 }
-              stroke={ 'rgba(255, 255, 255, 0.2)' }
-              fill={ 'transparent' }
-            />
+            {
+              l.children.length === 0 &&
+              <circle
+                cx={ 0 }
+                cy={ 0 }
+                r={ rad / 1.1 }
+                stroke={ 'rgba(255, 255, 255, 0.2)' }
+                fill={ 'transparent' }
+              />
+            }
             { !!l.parent &&
               (
                 <line
@@ -434,8 +437,8 @@ class MapApp extends Component {
             <text
               fill={'white'}
               fontSize={11}
-              x={ Math.cos(theta) * rad }
-              y={ Math.sin(theta) * rad}
+              x={ l.children.length === 0 ? Math.cos(theta) * rad : 0 }
+              y={ l.children.length === 0 ? Math.sin(theta) * rad : 0 }
               textAnchor={ 'middle' }
               alignmentBaseline={ 'central' }
             >

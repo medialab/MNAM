@@ -66,13 +66,16 @@ class Node {
 
       let nextLocation = locations.find(l => l.id === latestOperation.opt_branch.split('_')[0])
 
-      if (!!nextLocation) {
+      if (!!nextLocation && this.locationQueue[this.locationQueue.length - 1] !== nextLocation) {
         this.locationQueue.push(nextLocation)
 
         if (latestOperation.opt_branch.indexOf('_') > 0) {
           nextLocation = nextLocation.children.find(l => l.id === latestOperation.opt_branch)
-          if (!nextLocation) console.log('could not find children location')
-          this.locationQueue.unshift(nextLocation)
+          if (!nextLocation) {
+            console.log('could not find children location')
+          } else {
+            this.locationQueue.push(nextLocation)
+          }
         }
 
         // nextLocation.count ++
