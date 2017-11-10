@@ -1,0 +1,18 @@
+{
+  "PN": "PN - Storage",
+  "PN_stockage": "Storage",
+  "PN_ateliers": "Technical studios",
+  "PN_restauration": "Restoration studios",
+  "PN_photo": "Photography studio",
+  "PN_constats": "Condition reports studios",
+  "CPINTER": "CP internal zones",
+  "CPINTER_storage": "Storage",
+  "CPINTER_restoration": "Restoration studio",
+  "CPINTER_photo": "Photo/video studios",
+  "CPINTER_studio": "Technical studios",
+  "CPPUB": "CP display zones",
+  "CPPUB_perm": "Permanent exhib",
+  "CPPUB_temp": "Temporary exhib",
+  "EXPO": "External exhibitions",
+  "DEPOT": "Deposit"
+}

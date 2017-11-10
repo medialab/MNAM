@@ -439,7 +439,7 @@ class MapApp extends Component {
               textAnchor={ 'middle' }
               alignmentBaseline={ 'central' }
             >
-              { l.id }
+              { l.displayName }
             </text>
           </g>
         )

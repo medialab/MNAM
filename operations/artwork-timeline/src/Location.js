@@ -1,9 +1,11 @@
 
 import * as THREE from 'three'
+import displayNames from './displayNames.json'
 
 class Location {
   constructor (id, total) {
     this.id = id
+    this.displayName = displayNames[this.id]
     this.position = new THREE.Vector3()
     this.rad = 0
     this.count = 0
