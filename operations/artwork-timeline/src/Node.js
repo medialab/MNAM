@@ -48,8 +48,10 @@ class Node {
       if (o.date > date) {
         return true
       } else {
-        latestOperation = o
-        this.active = true
+        if (o.opt_branch !== 'unknown') {
+          latestOperation = o
+          this.active = true
+        }
         return false
       }
     })
@@ -60,22 +62,18 @@ class Node {
       if (!this.currentOperation) {
         this.targetColor.setHSL( Math.random(), 1.0, 0.5 )
       }
-      let nextLocation = locations.find(l => {
-        return l.id === latestOperation.opt_branch
-      })
+
+      let nextLocation = locations.find(l => l.id === latestOperation.opt_branch.split('_')[0])
 
       if (!!nextLocation) {
         this.locationQueue.push(nextLocation)
 
-        if (nextLocation.children.length > 0 && Math.random() < 0.5) {
-          if (!this.firstRun) {
-            nextLocation = nextLocation.children[Math.floor(Math.random() * nextLocation.children.length)]
-            this.locationQueue.unshift(nextLocation)
-          } else {
-            nextLocation = nextLocation.children[Math.floor(Math.random() * nextLocation.children.length)]
-            this.locationQueue = [nextLocation]
-          }
+        if (latestOperation.opt_branch.indexOf('_') > 0) {
+          nextLocation = nextLocation.children.find(l => l.id === latestOperation.opt_branch)
+          if (!nextLocation) console.log('could not find children location')
+          this.locationQueue.unshift(nextLocation)
         }
+
         nextLocation.count ++
         nextLocation.update()
 
@@ -86,7 +84,7 @@ class Node {
           this.position.copy(nextLocation.position.clone().add(offset))
         }
       } else {
-        console.log('oops')
+        console.log('oops', latestOperation.opt_branch)
       }
       this.currentOperation = latestOperation
     }

@@ -1,11 +1,13 @@
 
 /*
 
-  swing by parent location when going somewhere else
+
   children position doesn't update?
+  new data  
   location label
   color coding
 
+  swing by parent location when going somewhere else
   playback
   remove unknown from locations
   location theta per locationMap distribution
@@ -191,23 +193,63 @@ class MapApp extends Component {
 
     scene.add(particleSystem)
 
+    let operationTotal = 0
     const locationMap = {}
     nodes.forEach(n => {
       n.operations.forEach(o => {
         if (!locationMap[o.opt_branch]) locationMap[o.opt_branch] = 0 
         locationMap[o.opt_branch] ++
+        if (!!o.opt_branch) {
+          operationTotal ++
+        }
       })
     })
     console.log('locationMap', locationMap)
 
-    let theta = 0
-    let rad = 300
-    const locations = Object.keys(locationMap).map(l => {
-      const position = new THREE.Vector3(Math.cos(theta) * rad, Math.sin(theta) * rad, 0)
-      const location = new Location(l, position)
-      theta += Math.PI * 2 / Object.keys(locationMap).length
-      return location
-    })
+    // let theta = 0
+    const locations = Object.keys(locationMap)
+      .filter(l => l !== 'unknown' && l.indexOf('_') === -1)
+      .map(l => {
+        const location = new Location(l, locationMap[l])
+        return location
+      })
+
+    Object.keys(locationMap)
+      .filter(l => l.indexOf('_') > -1)
+      .forEach(l => {
+        const parentId = l.split('_')[0]
+        if (!locations.find(p => p.id === parentId)) {
+          const parent = new Location(parentId, 0)
+          locations.push(parent)
+        }
+      })
+
+    Object.keys(locationMap)
+      .filter(l => l.indexOf('_') > -1)
+      .forEach(l => {
+        const parent = locations.find(p => p.id === l.split('_')[0])
+        console.log(l, l.split('_')[0], locations.find(p => p.id === l.split('_')[0]))
+        const location = new Location(l, locationMap[l])
+        // console.log('mop', l, locationMap[l])
+        parent.addChildren(location)
+        return location
+      })
+
+
+    let rad = window.innerHeight / 3
+    let theta = -Math.PI / 2
+    locations
+      .sort((a, b) => b.total - a.total)
+      .forEach(l => {
+        l.setLayout(new THREE.Vector3(), theta, rad)
+        const locOperationCount = l.total + l.children.reduce((a, b) => a + b.total, 0)
+        // console.log('aga', l.children.reduce((a, b) => a + b.total, 0))
+        theta += map(Math.sqrt(locOperationCount), 0, Math.sqrt(operationTotal), 0, Math.PI * 2)
+      })
+
+    // console.log('test', locations
+    //   .sort((a, b) => b.total - a.total))
+
 
     const currentDate = timeRange[0] - 100
 
