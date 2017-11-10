@@ -33,7 +33,11 @@ class Artwork extends Component {
 
   shouldComponentUpdate (props, state) {
     // return props.active && !this.props.active
-    return props.active !== this.props.active || this.state.focused !== state.focused
+    return props.active !== this.props.active ||
+      this.state.focused !== state.focused ||
+      this.props.data._id !== props.data._id ||
+      props.selectedOpts.length !== this.props.selectedOpts.length
+
   }
 
   render () {
@@ -44,7 +48,8 @@ class Artwork extends Component {
       height,
       colorCodes,
       colorList,
-      active
+      active,
+      selectedOpts
     } = this.props
 
     const {
@@ -68,7 +73,7 @@ class Artwork extends Component {
       .map((p, i) => {
         const currentOperation = visibilityOperations[i]
         const nextOperation = visibilityOperations[i + 1]
-        
+
         const stepRange = [1000000, 0]
         data.ySteps
           .forEach((s, j) => {
@@ -102,6 +107,7 @@ class Artwork extends Component {
 
     let currentStatus = 'uninstallation'
     const bubbles = data.operations
+      .filter(o => selectedOpts.length === 0 || selectedOpts.indexOf(o.opt_code) > -1)
       .map((o, i) => {
         if (o.opt_code === '212I' || o.opt_code === '212E') {
           currentStatus = 'installation'
@@ -155,7 +161,7 @@ class Artwork extends Component {
       </text>
     )
 
-    const overlay = focused > -1 ? 
+    const overlay = focused > -1 ?
       (
         <g
           style={{
