@@ -66,7 +66,15 @@ class Node {
 
       let nextLocation = locations.find(l => l.id === latestOperation.opt_branch.split('_')[0])
 
+
       if (!!nextLocation && this.locationQueue[this.locationQueue.length - 1] !== nextLocation) {
+        
+        if (!!this.currentLocation && 
+            nextLocation.id.split('_')[0] !== this.currentLocation.id.split('_')[0] &&
+            !!this.currentLocation.parent) {
+          this.locationQueue.push(this.currentLocation.parent)
+        }
+        
         this.locationQueue.push(nextLocation)
 
         if (latestOperation.opt_branch.indexOf('_') > 0) {
@@ -116,15 +124,13 @@ class Node {
 
     if (!!this.currentLocation) {
       const distanceToTarget = this.position.distanceTo(this.currentLocation.position)
-      if (distanceToTarget > this.currentLocation.rad / 2) {
+      if (distanceToTarget > this.currentLocation.rad) {
         const force = this.currentLocation.position.clone().sub(this.position)
         force.normalize()
         force.multiplyScalar(distanceToTarget * this.attractionToTarget)
         this.acc.add(force)
-      } else {
-        if (this.locationQueue.length > 1) {
-          this.currentLocation.count--
-        }
+      } else if (this.locationQueue.length > 1) {
+        this.currentLocation.count--
         this.locationQueue.shift()
         if (!!this.locationQueue[0]) {
           this.locationQueue[0].count++

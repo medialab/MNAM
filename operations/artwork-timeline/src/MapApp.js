@@ -398,7 +398,7 @@ class MapApp extends Component {
       .concat(locations.reduce((a, b) => a.concat(b.children), []))
       .map((l, i) => {
         const theta = Math.atan2(l.position.x, l.position.y)
-        const rad = l.rad + 25
+        const rad = l.rad + 10
         const x = l.position.x + width / 2
         const y = height - (l.position.y + height / 2)
             /*<line
@@ -418,7 +418,7 @@ class MapApp extends Component {
               <circle
                 cx={ 0 }
                 cy={ 0 }
-                r={ rad / 1.1 }
+                r={ rad }
                 stroke={ 'rgba(255, 255, 255, 0.2)' }
                 fill={ 'transparent' }
               />
@@ -436,9 +436,9 @@ class MapApp extends Component {
             }
             <text
               fill={'white'}
-              fontSize={11}
-              x={ l.children.length === 0 ? Math.cos(theta) * rad : 0 }
-              y={ l.children.length === 0 ? Math.sin(theta) * rad : 0 }
+              fontSize={ l.children.length === 0 && !!l.parent ? 11 : 16 }
+              x={ l.children.length === 0 && !!l.parent ? Math.cos(theta) * rad : 0 }
+              y={ l.children.length === 0 && !!l.parent ? Math.sin(theta) * rad : 0 + (l.children.length === 0 && !!l.parent ? 0 : 20) }
               textAnchor={ 'middle' }
               alignmentBaseline={ 'central' }
             >

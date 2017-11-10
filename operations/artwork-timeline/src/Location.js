@@ -40,10 +40,11 @@ class Location {
     this.thetaOffset = thetaOffset * 2
 
     let t = theta - this.thetaOffset / 1.5
-    this.children.forEach(c => {
-      c.setLayout (this.position.clone(), t, 30)
-      t += this.thetaOffset / this.children.length
-    })
+    this.children
+      .forEach(c => {
+        c.setLayout (this.position.clone(), t, 30)
+        t += this.thetaOffset / this.children.length
+      })
 
     // if (this.children.length > 0) {
     //   console.log(this.id, this.position)
@@ -53,7 +54,8 @@ class Location {
 
   update () {
     this.rad = Math.max(this.children.length > 0 ? 35 : 10, Math.sqrt(this.nodeSize / 4 * this.count))
-    
+    if (this.children.length > 0) this.rad = 35
+
     let theta = this.theta - this.thetaOffset / 2
 
     this.children.forEach(c => {
