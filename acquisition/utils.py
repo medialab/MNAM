@@ -72,62 +72,6 @@ def get_all_doc(filename):
 def test():
 	filename = '/home/akira/Documents/Dev/Datasprint/textfields.csv'
 	get_all_doc(filename)
-test()
-
-
-
-# What do I have ? 
-# ---> a label_tag map that you get from gephi csv
-# ---> some data that needs to tagged
-
-# What do I need ?
-# ---> A function that creates a label-tag map
-# ---> Tag all the artworks 
-
-
-def create_keyword_tag_map(filename):
-	'''
-		Creates a map that link a keyword to a tag by 
-		reading the csv generated from gephi
-
-		Parameter
-			filename: filename of the gephi csv
-
-		Return
-			keyword_tag_map: a dict {keyword: label}
-	'''
-	with open(filename, 'r') as f:
-		reader = csv.reader(f)
-		next(reader)
-
-		# Create the map from gephi csv
-		label_tag_map = defaultdict(lambda: None)
-		for row in reader:
-			keyword = row[?]
-			tag = row[?]
-			keyword_tag_map[label] = tag
-
-	return keyword_tag_map
-
-
-def get_tags_from(gephi_csv):
-	'''
-		Returns the tags from gephi.csv
-	'''
-	tags = set()
-	with open(gephi_csv, 'r') as f:
-		reader = csvkit.DictReader(f)
-
-		for row in reader:
-			tags.update(row['tag'])
-
-	return list(tags)
-
-
-
-
-
-
 
 
 
