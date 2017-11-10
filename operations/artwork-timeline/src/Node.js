@@ -15,6 +15,7 @@ class Node {
 
     this.currentOperation = null
     this.locationQueue = []
+    this.currentLocation = null
 
     var geometry = new THREE.CircleGeometry( 8, 32 )
     var material = new THREE.MeshBasicMaterial( { color: Math.random()* 0xffffff } )
@@ -74,8 +75,8 @@ class Node {
           this.locationQueue.unshift(nextLocation)
         }
 
-        nextLocation.count ++
-        nextLocation.update()
+        // nextLocation.count ++
+        // nextLocation.update()
 
         if (!this.currentOperation) {
           const theta = Math.random() * Math.PI * 2
@@ -90,7 +91,7 @@ class Node {
     }
 
     nodes.forEach((n, i) => {
-      if (this.position.distanceTo(n.position) < this.size) {
+      if (this.position.distanceTo(n.position) < this.size / 1.5) {
         const distanceToTarget = this.position.distanceTo(n.position)
         const force = n.position.clone().sub(this.position)
         force.negate()
@@ -100,19 +101,45 @@ class Node {
       }
     })
 
-    if (this.locationQueue.length > 0) {
-      const distanceToTarget = this.position.distanceTo(this.locationQueue[0].position)
-      if (distanceToTarget > this.locationQueue[0].rad / 2) {
-        const force = this.locationQueue[0].position.clone().sub(this.position)
+    if (this.currentLocation !== this.locationQueue[0]) {
+      if (!!this.currentLocation) {
+        //this.currentLocation.count--
+      }
+      this.currentLocation = this.locationQueue[0]
+      if (!!this.currentLocation) {
+        this.currentLocation.count++
+      }
+    }
+
+    if (!!this.currentLocation) {
+      const distanceToTarget = this.position.distanceTo(this.currentLocation.position)
+      if (distanceToTarget > this.currentLocation.rad / 2) {
+        const force = this.currentLocation.position.clone().sub(this.position)
         force.normalize()
         force.multiplyScalar(distanceToTarget * this.attractionToTarget)
         this.acc.add(force)
       } else {
-        this.locationQueue[0].count --
+        if (this.locationQueue.length > 1) {
+          this.currentLocation.count--
+        }
         this.locationQueue.shift()
-        if (!!this.locationQueue[0]) this.locationQueue[0].count ++
+        if (!!this.locationQueue[0]) {
+          this.locationQueue[0].count++
+        }
       }
     }
+
+    // if (this.currentLocation !== this.locationQueue[0]) {
+    //   if (!!this.currentLocation) {
+    //     this.currentLocation.count --
+    //     this.currentLocation.update()
+    //   }
+    //   if (!!this.locationQueue[0]) {
+    //     this.currentLocation = this.locationQueue[0]
+    //     this.currentLocation.count ++
+    //     this.currentLocation.update()
+    //   }
+    // }
 
     this.vel.add(this.acc)
     this.position.add(this.vel)

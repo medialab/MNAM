@@ -1,12 +1,12 @@
 
 /*
 
-  location label
-  children position doesn't update?
+  location radius
+  better layout
   color coding
   sort colors in locations
-
   swing by parent location when going somewhere else
+
   playback
   remove unknown from locations
   location theta per locationMap distribution
@@ -199,7 +199,7 @@ class MapApp extends Component {
       n.operations.forEach(o => {
         if (!locationMap[o.opt_branch]) locationMap[o.opt_branch] = 0 
         locationMap[o.opt_branch] ++
-        if (!!o.opt_branch) {
+        if (!!o.opt_branch && o.opt_branch !== 'unknown') {
           operationTotal ++
         }
       })
@@ -207,10 +207,11 @@ class MapApp extends Component {
     console.log('locationMap', locationMap)
 
     // let theta = 0
-    const locations = Object.keys(locationMap)
+    let locations = Object.keys(locationMap)
       .filter(l => l !== 'unknown' && l.indexOf('_') === -1)
       .map(l => {
         const location = new Location(l, locationMap[l])
+        console.log('oook', l)
         return location
       })
 
@@ -224,11 +225,18 @@ class MapApp extends Component {
         }
       })
 
+    locations = [
+      locations.find(l => l.id === 'CPPUB'),
+      locations.find(l => l.id === 'CPINTER'),
+      locations.find(l => l.id === 'PN'),
+      locations.find(l => l.id === 'DEPOT'),
+      locations.find(l => l.id === 'EXPO'),
+    ]
+
     Object.keys(locationMap)
       .filter(l => l.indexOf('_') > -1)
       .forEach(l => {
         const parent = locations.find(p => p.id === l.split('_')[0])
-        console.log(l, l.split('_')[0], locations.find(p => p.id === l.split('_')[0]))
         const location = new Location(l, locationMap[l])
         // console.log('mop', l, locationMap[l])
         parent.addChildren(location)
@@ -236,21 +244,25 @@ class MapApp extends Component {
       })
 
 
-    let rad = window.innerHeight / 3
-    let theta = -Math.PI / 2
+    let rad = window.innerHeight / 4
+    // let theta = -Math.PI / 2
+    let theta = 0
+
+    locations.forEach(l => {
+      l.setFinalRad()
+    })
+
+    const allRads = locations.reduce((a, b) => a + b.finalRad, 0)
+
     locations
-      .sort((a, b) => b.total - a.total)
+      // .sort((a, b) => b.finalRad - a.finalRad)
       .forEach(l => {
+
+        const thetaOffset = l.finalRad / allRads * Math.PI * 2
+        theta += thetaOffset / 2
         l.setLayout(new THREE.Vector3(), theta, rad)
-        const locOperationCount = l.total + l.children.reduce((a, b) => a + b.total, 0)
-        // console.log('aga', l.children.reduce((a, b) => a + b.total, 0))
-        // theta += map(Math.sqrt(locOperationCount), 0, Math.sqrt(operationTotal), 0, Math.PI * 2)
-        theta += Math.PI * 2 / locations.length
+        theta += thetaOffset / 2
       })
-
-    // console.log('test', locations
-    //   .sort((a, b) => b.total - a.total))
-
 
     const currentDate = timeRange[0] - 100
 
@@ -360,6 +372,12 @@ class MapApp extends Component {
       currentDate: currentDate + speed,
       nodeGrid: newNodeGrid
     })
+
+    // if (Math.random() < 0.01) {
+    //   locations.forEach(l => {
+    //     console.log(l.id, l.count)
+    //   })
+    // }
     
     requestAnimationFrame(this.tick)
 
@@ -376,33 +394,44 @@ class MapApp extends Component {
       operationTotal
     } = this.state
 
-    const locationLabels = locations.map((l, i) => {
-      const theta = Math.atan2(l.position.x, l.position.y)
-      const rad = l.rad * 2
-      return (
-        <g
-          key={ `locationLabel-${i}` }
-          transform={ `translate(${l.position.x + width / 2}, ${height - (l.position.y + height / 2)})` }
-        >
-          <line
-            x1={ 0 }
-            y1={ 0 }
-            x2={ Math.cos(theta) * rad }
-            y2={ Math.sin(theta) * rad}
-            stroke={ 'rgba(255, 255, 255, 0.2)' }
-          />
-          <text
-            fill={'white'}
-            fontSize={11}
-            x={ Math.cos(theta) * rad }
-            y={ Math.sin(theta) * rad}
-            textAnchor={ 'middle' }
-            alignmentBaseline={ 'central' }
+    // console.log('aga', locations.reduce((a, b) => a.concat(b.children), []))
+
+    const locationLabels = locations
+      .concat(locations.reduce((a, b) => a.concat(b.children), []))
+      .map((l, i) => {
+        const theta = Math.atan2(l.position.x, l.position.y)
+        const rad = l.rad + 25
+        return (
+          <g
+            key={ `locationLabel-${i}` }
+            transform={ `translate(${l.position.x + width / 2}, ${height - (l.position.y + height / 2)})` }
           >
-            { l.id }
-          </text>
-        </g>
-      )
+            <circle
+              cx={ 0 }
+              cy={ 0 }
+              r={ rad / 1.1 }
+              stroke={ 'rgba(255, 255, 255, 0.2)' }
+              fill={ 'transparent' }
+            />
+            <line
+              x1={ 0 }
+              y1={ 0 }
+              x2={ Math.cos(theta) * rad }
+              y2={ Math.sin(theta) * rad}
+              stroke={ 'rgba(255, 255, 255, 0.2)' }
+            />
+            <text
+              fill={'white'}
+              fontSize={11}
+              x={ Math.cos(theta) * rad }
+              y={ Math.sin(theta) * rad}
+              textAnchor={ 'middle' }
+              alignmentBaseline={ 'central' }
+            >
+              { l.id }
+            </text>
+          </g>
+        )
       // return (
 
       //   <div
