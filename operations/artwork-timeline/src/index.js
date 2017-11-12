@@ -17,8 +17,8 @@ document.querySelector('#root').scrollTop = 0
 registerServiceWorker();
 
 var client = new XMLHttpRequest()
-// client.open('GET', process.env.PUBLIC_URL + '/data/artwork_operations.json')
-client.open('GET', process.env.PUBLIC_URL + '/data/artwork_operations_with_branch.json')
+client.open('GET', process.env.PUBLIC_URL + '/data/artwork_operations.json')
+// client.open('GET', process.env.PUBLIC_URL + '/data/artwork_operations_with_branch.json')
 client.onload = function() {
   // App initialization
   const rootElement = document.getElementById('root')
@@ -27,20 +27,20 @@ client.onload = function() {
     (
       <Router>
         <Switch>
-          <Route 
+          <Route
             exact
             path='/'
-            render={(props) => <App data={ data }/>} 
+            render={(props) => <App data={ data }/>}
           />
-          <Route 
+          <Route
             exact
             path='/timeline'
-            render={(props) => <App data={ data }/>} 
+            render={(props) => <App data={ data }/>}
           />
-          <Route 
+          <Route
             exact
             path='/map'
-            render={(props) => <MapApp data={ data }/>} 
+            render={(props) => <MapApp data={ data }/>}
           />
         </Switch>
       </Router>

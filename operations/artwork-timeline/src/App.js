@@ -1,7 +1,7 @@
 /*
 
   filter by material
-  fix time on display  
+  fix time on display
   focus on one artwork
   sort by time on display
   filter by exhibition
@@ -45,6 +45,7 @@ import React, { Component } from 'react';
 import Artwork from './Artwork'
 import { map, shuffleArray, lerp } from './utils'
 import { cubehelix } from 'd3-color'
+import FilterContainer from "./FilterContainer"
 
 import './App.css';
 
@@ -55,6 +56,7 @@ class App extends Component {
     super(props)
     this.state = {
       artworks: [],
+      artworks_filtered: [],
       timeRange: [10000000000000, 0],
       artworkCount: 10000,
       stopList: [
@@ -78,7 +80,7 @@ class App extends Component {
       ],
       height: 50,
       halfDecadeRange: [2000, 2015],
-      colorCodes: 
+      colorCodes:
         [['210I','211I','212I','213I','214I','215I','216I','220I','221I','241I','242I','260I','261I','262I','270I','271I','299I','730I','740I','750I','760I'],
         ['210E','211E','212E','213E','216E','220E','221E','230E','240E','241E','242E','244E','250E','260E','261E','262E','270E','280E','281E','282E','290E','299E','730E','740E','750E','760E'],
         ['301','302','303','304','305','306','307','308','310'],
@@ -110,10 +112,24 @@ class App extends Component {
       colorList: [],
       colorBuckets: {},
       viewportRange: [0, 1000],
+      filter: {
+        materials: [],
+        domain: [],
+        domain_leaf: [],
+        artworks: [],
+        artists: [],
+        opt_code: []
+      }
     }
 
     this.onScroll = this.onScroll.bind(this)
     this.init = this.init.bind(this)
+    this.updateArtworkFilter = this.updateArtworkFilter.bind(this)
+    this.updateArtistFilter = this.updateArtistFilter.bind(this)
+    this.updateMaterialFilter = this.updateMaterialFilter.bind(this)
+    this.updateDomainFilter = this.updateDomainFilter.bind(this)
+    this.updateDomainLeafFilter = this.updateDomainLeafFilter.bind(this)
+    this.updateOperationFilter = this.updateOperationFilter.bind(this)
   }
 
   componentDidMount () {
@@ -246,7 +262,7 @@ class App extends Component {
         //     // const dist = - y
         //     // const direction = (dist + 1) / Math.abs(dist + 1)
         //     // acc = Math.pow(Math.abs(dist), 2) * 0.00001 * direction
-            
+
         //     // if (acc > 0) vel = lerp(vel, 0, 0.5)
         //     // acc = -0.02
 
@@ -287,7 +303,7 @@ class App extends Component {
             return true
           } else return false
         })
-        
+
       })
     })
 
@@ -301,11 +317,105 @@ class App extends Component {
       colorBuckets
     })
   }
+  /////////////////////////
+  // filter handlers
+  //////////////////////////
+  textSearchFilter(filter, field) {
+    if(filter.length>0) {
+      const data = this.state.artworks.filter(d => d[field]!==null)
+      .filter((d) =>{
+        return filter.some((v)=> {
+          return d[field].toLowerCase().indexOf(v.toLowerCase()) > -1;
+        })
+      })
+      return data;
+    }
+    else return this.state.artworks;
+  }
+  updateMaterialFilter (filter) {
+    this.setState({
+      artworks_filtered: this.textSearchFilter(filter, "domain_description_mst"),
+      // filter: {
+      //   materials: filter,
+      //   domain: [],
+      //   domain_leaf: [],
+      //   artworks: [],
+      //   artists: [],
+      //   opt_code: []
+      // }
+    })
+  }
+
+  updateDomainFilter (filter) {
+    this.setState({
+      artworks_filtered: this.textSearchFilter(filter, "domain")
+    })
+  }
+
+  updateDomainLeafFilter (filter) {
+    this.setState({
+      artworks_filtered: this.textSearchFilter(filter, "domain_leaf")
+    })
+  }
+
+  updateArtistFilter (filter) {
+    this.setState({
+      artworks_filtered: this.textSearchFilter(filter, "authors_list")
+    })
+  }
+
+  updateArtworkFilter (filter) {
+    const data = this.state.artworks.filter((d) =>{
+      return filter.indexOf(d._id.toString()) > -1;
+    })
+    this.setState({
+      artworks_filtered: data
+    })
+  }
+
+  updateOperationFilter (opt_code) {
+    // if(opt_code.length>0) {
+    //   let data = this.state.artworks.slice();
+    //   console.log(data.length)
+    //   data.forEach((artwork) => {
+    //     const a = artwork.opt_field.filter((d) => {
+    //       return opt_code.indexOf(d.opt_code) > -1
+    //     })
+    //   })
+
+    //   // data = data.filter((d) => {
+    //   //   return d.opt_field.length > 0
+    //   // })
+    //   this.setState({
+    //     artworks_filtered: data,
+    //     filter: {
+    //       ...this.state.filter,
+    //       opt_code
+    //     }
+    //   })
+    // }
+    // else {
+    //   this.setState({
+    //     artworks_filtered: this.state.artworks,
+    //     filter: {
+    //       ...this.state.filter,
+    //       opt_code
+    //     }
+    //   })
+    // }
+    this.setState({
+      filter: {
+        ...this.state.filter,
+        opt_code
+      }
+    })
+  }
 
   render() {
 
     const {
       artworks,
+      artworks_filtered,
       timeRange,
       height,
       halfDecadeRange,
@@ -313,18 +423,19 @@ class App extends Component {
       colorList,
       colorBuckets,
       colorLabels,
-      viewportRange
+      viewportRange,
+      filter
     } = this.state
 
     // if (artworks.length === 0) return (
     //   <div className="App"></div>
     // )
-
-    const timelines = artworks.map((a, i) => {
+    const artworks_displayed = artworks_filtered.length>0 ? artworks_filtered : artworks;
+    const timelines = artworks_displayed.map((a, i) => {
       const originalY = (i + 1) * height
       const offset = !!this.refs.timelineWrapper ? this.refs.timelineWrapper.offsetTop : 0
       const active = originalY - height / 2 + offset < viewportRange[1] && originalY + height + offset > viewportRange[0]
-      
+
       if (!active) {
         return null
       } else {
@@ -339,6 +450,7 @@ class App extends Component {
             colorCodes={ colorCodes }
             colorList={ colorList }
             active={ active }
+            selectedOpts={filter.opt_code}
           />
         )
       }
@@ -427,6 +539,27 @@ class App extends Component {
         <h1>
           ARTWORK TIMELINE
         </h1>
+        <p>{artworks_displayed.length} artworks found</p>
+        <div className="App-filters">
+          <div className="filter">
+            <FilterContainer filter={this.state.filter.artworks} updateFilter={this.updateArtworkFilter} label={"artwork id"} />
+          </div>
+          <div className="filter">
+            <FilterContainer filter={this.state.filter.artists} updateFilter={this.updateArtistFilter} label={"artist"} />
+          </div>
+          <div className="filter">
+            <FilterContainer filter={this.state.filter.materials} updateFilter={this.updateMaterialFilter} label={"material"} />
+          </div>
+          <div className="filter">
+            <FilterContainer filter={this.state.filter.domain} updateFilter={this.updateDomainFilter} label={"domain"} />
+          </div>
+          <div className="filter">
+            <FilterContainer filter={this.state.filter.domain_leaf} updateFilter={this.updateDomainLeafFilter} label={"domain leaf"} />
+          </div>
+          <div className="filter">
+            <FilterContainer filter={this.state.filter.opt_code} updateFilter={this.updateOperationFilter} label={"operation code"} />
+          </div>
+        </div>
         <ul className="legend">
           { legend }
         </ul>

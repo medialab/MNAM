@@ -4,9 +4,10 @@ html, body {
   background-color: #052244;
   color: white;
 }
-
-.App {
+h1, p {
   text-align: center;
+}
+.App {
   padding: 50px;
   position: relative;
 }
@@ -30,6 +31,15 @@ html, body {
 .App-intro {
   font-size: large;
 }
+
+.App-filters {
+  text-align: left;
+}
+.App-filters > .filter {
+  display: inline-block;
+  margin-right: 20px;
+}
+
 
 @keyframes App-logo-spin {
   from { transform: rotate(0deg); }
