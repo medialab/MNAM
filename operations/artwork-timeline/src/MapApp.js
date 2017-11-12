@@ -1,10 +1,12 @@
 
 /*
 
-  swing by parent location when going somewhere else
+  oops EXPO?
+  don't swing by when spawning
   color coding
-  sort colors in locations
+  legend
 
+  sort colors in locations
   playback
   remove unknown from locations
   location theta per locationMap distribution
@@ -78,7 +80,38 @@ class MapApp extends Component {
       speed: 1000 * 60 * 60 * 24,
       width: 100,
       height: 100,
-      operationTotal: 0
+      operationTotal: 0,
+      colorCodes: 
+        [['210I','211I','212I','213I','214I','215I','216I','220I','221I','241I','242I','260I','261I','262I','270I','271I','299I','730I','740I','750I','760I'],
+        ['210E','211E','212E','213E','216E','220E','221E','230E','240E','241E','242E','244E','250E','260E','261E','262E','270E','280E','281E','282E','290E','299E','730E','740E','750E','760E'],
+        ['301','302','303','304','305','306','307','308','310'],
+        ['321','322'],
+        ['410','420','431','432'],
+        ['510','520'],
+        ['710','720'],
+        ['900','910','911','912','913','920','921','922','930','931','940','970','971','972','973','974','980','990'],
+        ['790','800','810','811','820','821','850','890','891','892'],
+        ['600','610','620','625','630','650','660','680'],
+        ['700','770','771','772','960'],
+        ['950'],
+        ['901']],
+      colorLabels: [
+        'Déplacement vers localisation interne',
+        'Déplacement vers localisation externe',
+        'Constat oeuvre',
+        'Intervention oeuvre',
+        'Fiche technique - habillage',
+        'Fiche technique - emballage',
+        'Courriers',
+        'Opérations diverses',
+        'Perte ou vol',
+        'Photographies',
+        'Récolement',
+        'Evaluation valeurs d\'assurance',
+        'Inventaire réglementaire'
+      ],
+      colorList: [],
+      colorBuckets: {}
     }
 
     this.init = this.init.bind(this)
@@ -95,10 +128,19 @@ class MapApp extends Component {
       timeRange,
       artworkCount,
       stopList,
+      colorCodes
     } = this.state
 
     const width = document.getElementById('root').clientWidth
     const height = document.getElementById('root').clientHeight
+
+    let colorOffset = 1
+    const colorList = new Array(colorCodes.length).fill(0)
+      .map((v, i) => {
+        if (colorOffset === 0) colorOffset += 355 / 2
+        else colorOffset = 0
+        return cubehelix((Math.floor(i / colorCodes.length * 355 / 2) + colorOffset) % 355, 1, 0.5)
+      })
 
     const artworks = props.data
       .filter((d, i) => i < artworkCount)
@@ -172,8 +214,6 @@ class MapApp extends Component {
     var positions = []
     var colors = []
     var sizes = []
-
-    var color = new THREE.Color()
 
     const nodes = artworks.map((a, i) => {
       const node = new Node(a, scene, width, height, i)
@@ -264,6 +304,21 @@ class MapApp extends Component {
 
     const currentDate = timeRange[0] - 100
 
+    const colorBuckets = {}
+    nodes.forEach(n => {
+      n.operations.forEach(o => {
+        colorCodes.some((codes, j) => {
+          if (codes.indexOf(o.opt_code) > -1) {
+            if (!colorBuckets[j]) colorBuckets[j] = 0
+            colorBuckets[j] ++
+            return true
+          } else return false
+        })
+      })
+    })
+
+    console.log('test', colorList.map(c => c.rgb()))
+
     this.setState({
       ...this.state,
       timeRange,
@@ -276,7 +331,9 @@ class MapApp extends Component {
       locations,
       currentDate,
       particleSystem,
-      operationTotal
+      operationTotal,
+      colorList,
+      colorBuckets
     })
 
 
@@ -294,7 +351,10 @@ class MapApp extends Component {
       speed,
       width,
       height,
-      nodeGrid
+      nodeGrid,
+      colorList,
+      colorBuckets,
+      colorCodes
     } = this.state
 
     let {
@@ -339,7 +399,7 @@ class MapApp extends Component {
       }
 
       // const ratio = Math.floor(neighboringNodes.length / 20)
-      const pos = n.update(currentDate, locations, neighboringNodes)
+      const pos = n.update(currentDate, locations, neighboringNodes, colorList, colorCodes)
       if (!!pos) {
         // console.log(pos)
         const x = Math.floor((pos.x + width / 2) / width * gridResolution)
@@ -367,7 +427,7 @@ class MapApp extends Component {
 
     this.setState({
       ...this.state,
-      currentDate: currentDate + speed,
+      currentDate: Math.min(Date.now(), currentDate + speed),
       nodeGrid: newNodeGrid
     })
 
@@ -389,7 +449,8 @@ class MapApp extends Component {
       artworks,
       timeRange,
       locations,
-      operationTotal
+      operationTotal,
+      currentDate
     } = this.state
 
     // console.log('aga', locations.reduce((a, b) => a.concat(b.children), []))
@@ -406,7 +467,7 @@ class MapApp extends Component {
               y1={ 0 }
               x2={ Math.cos(theta) * rad }
               y2={ Math.sin(theta) * rad}
-              stroke={ 'rgba(255, 255, 255, 0.2)' }
+              stroke={ 'rgba(255, 255, 255, 0.4)' }
             />*/
         return (
           <g
@@ -419,7 +480,7 @@ class MapApp extends Component {
                 cx={ 0 }
                 cy={ 0 }
                 r={ rad }
-                stroke={ 'rgba(255, 255, 255, 0.2)' }
+                stroke={ 'rgba(255, 255, 255, 0.4)' }
                 fill={ 'transparent' }
               />
             }
@@ -430,7 +491,7 @@ class MapApp extends Component {
                   y1={ 0 }
                   x2={ l.parent.position.x - x + width / 2 }
                   y2={ height - (l.parent.position.y + height / 2)  - y }
-                  stroke={ 'rgba(255, 255, 255, 0.2)' }
+                  stroke={ 'rgba(255, 255, 255, 0.4)' }
                 />
               )
             }
@@ -461,6 +522,17 @@ class MapApp extends Component {
       // )
     })
 
+    const dateString = `${new Date(currentDate).getMonth() + 1} / ${new Date(currentDate).getYear() + 1900}`
+    const counter = (
+      <text
+        fill={`white`}
+        x={ 50 }
+        y={ 50 }
+      >
+        { dateString }
+      </text>
+    )
+
     return (
       <div
         className="Map"
@@ -470,7 +542,7 @@ class MapApp extends Component {
           className="domOverlay"
           ref="domOverlay"
         >
-
+          { counter }
           { locationLabels }
         </svg>
       </div>

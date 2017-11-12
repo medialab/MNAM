@@ -41,10 +41,11 @@ class Node {
 
   }
 
-  update (date, locations, nodes) {
+  update (date, locations, nodes, colorList, colorCodes) {
 
 
     let latestOperation = null
+    let latestCode = null
     this.operations.some(o => {
       if (o.date > date) {
         return true
@@ -53,11 +54,25 @@ class Node {
           latestOperation = o
           this.active = true
         }
+        latestCode = o.opt_code
         return false
       }
     })
     
     if (!this.active) return null
+
+    if (!!latestCode) {
+      // console.log(latestCode)
+      let colorIndex = 0
+      colorCodes.some((codes, j) => {
+        if (codes.indexOf(latestCode) > -1) {
+          colorIndex = j
+          return true
+        } else return false
+      })
+      const rgb = colorList[colorIndex].rgb()
+      this.targetColor.setRGB(rgb.r / 255, rgb.g / 255, rgb.b / 255)
+    }
 
     if (latestOperation !== this.currentOperation) {
       if (!this.currentOperation) {
@@ -70,8 +85,9 @@ class Node {
       if (!!nextLocation && this.locationQueue[this.locationQueue.length - 1] !== nextLocation) {
         
         if (!!this.currentLocation && 
-            nextLocation.id.split('_')[0] !== this.currentLocation.id.split('_')[0] &&
-            !!this.currentLocation.parent) {
+          nextLocation.id.split('_')[0] !== this.currentLocation.id.split('_')[0] &&
+          !!this.currentLocation.parent
+        ) {
           this.locationQueue.push(this.currentLocation.parent)
         }
         
@@ -82,6 +98,9 @@ class Node {
           if (!nextLocation) {
             console.log('could not find children location')
           } else {
+            if (this.firstRun) {
+              this.locationQueue.pop()
+            }
             this.locationQueue.push(nextLocation)
           }
         }
@@ -98,6 +117,7 @@ class Node {
       } else {
         console.log('oops', latestOperation.opt_branch)
       }
+
       this.currentOperation = latestOperation
     }
 
