@@ -1,6 +1,11 @@
 import csvkit
 from collections import defaultdict
 from pprint import pprint
+import sys
+import csv
+
+csv.field_size_limit(sys.maxsize)
+
 
 # What do I have ? 
 # ---> a label_tag map that you get from gephi csv
@@ -25,19 +30,25 @@ def create_keyword_tag_map(filename):
 	with open(filename, 'r') as f:
 		reader = csvkit.DictReader(f)
 		next(reader)
-
+		tags = set()
 		# Create the map from gephi csv
 		keyword_tag_map = defaultdict(lambda: 'unknown')
 		for row in reader:
 			keyword = row['Label']
 			tag = row['theme_check']
+			tags.update(tag)
+			if tag == 'sciences at savoirs':
+				tag = 'sciences et savoirs'
+			if tag == 'architectere':
+				tag = 'architecture'
 			keyword_tag_map[keyword] = tag
 
 	for k, v in keyword_tag_map.items():
 		if v == 'OK' or v == 'KO':
 			keyword_tag_map[k] = 'unknown'
 
-	pprint(keyword_tag_map)
+	print('Number of keywords:', len(keyword_tag_map))
+	print('Number of tags:', len(tags))
 
 	return keyword_tag_map
 
@@ -65,6 +76,17 @@ def get_tags_from(gephi_csv):
 # Warning: are you dealing with multiple tags ?
 
 
+def get_artist_names(authors, collection):
+	'''
+	'''
+	id_names_map = defaultdict(lambda: '')
+	with open(authors, 'r') as f:
+		reader = csvkit.DictReader(f)
+		for row in reader:
+			id_names_map[row['Id artist']] = row['name']
+	return id_names_map
+
+
 def get_tags_from_field(keywords, keyword_tag_map):
 	'''
 		For a single field ie icono_keywords
@@ -76,7 +98,6 @@ def get_tags_from_field(keywords, keyword_tag_map):
 		tags = ['unknown']
 	else:
 		tags = [keyword_tag_map[k] for k in keywords if keyword_tag_map[k] is not None]
-
 	tags = list(set(tags))
 	
 	if len(tags) > 1:
@@ -84,7 +105,6 @@ def get_tags_from_field(keywords, keyword_tag_map):
 			tags.remove('unknown')
 		except:
 			pass
-
 	return tags
 
 
@@ -92,6 +112,7 @@ def tag_artworks(collection, output, keyword_tag_map):
 	'''
 		tag all of the artworks of a collection using 
 		gephi csv
+		Also add name of the author
 	'''
 	with open(collection, 'r') as fi:
 		with open(output, 'w') as fo:
@@ -103,8 +124,11 @@ def tag_artworks(collection, output, keyword_tag_map):
 			# Init new csv with updated header
 			#header += ['tag_ico', 'tag_theme', 'tag_mat']
 			header.append('tag_thema')
+			header.append('name')
 			writer = csvkit.DictWriter(fo, fieldnames=header)
 			writer.writeheader()
+
+			id_names_map = get_artist_names('/home/akira/Documents/Dev/Datasprint/authors.csv', collection)
 
 			for input_row in reader:
 				# Init dict to write
@@ -114,7 +138,10 @@ def tag_artworks(collection, output, keyword_tag_map):
 				# Tag
 				thema_words = input_row['themas'].split(', ')
 				tags = get_tags_from_field(thema_words, keyword_tag_map)
-				output_row['tag_thema'] = tags
+				output_row['tag_thema'] = ', '.join(tags)
+
+				# Add author's name
+				output_row['name'] = id_names_map[input_row['Id artists']].replace('"', '')
 
 				# Write row
 				writer.writerow(output_row)
