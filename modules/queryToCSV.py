@@ -4,7 +4,7 @@ import csv
 import json
 
 if len(sys.argv) < 4:
-	sys.exit("USAGE: " + sys.argv[0] + " 'mongo find dict' 'mongo field dict' [destCSV]")
+    sys.exit("USAGE: " + sys.argv[0] + " 'mongo find dict' 'mongo field dict' [destCSV]")
 
 #Truc chiants:
 # on veut mettre la requete en argument => DONE
@@ -18,17 +18,17 @@ field_dict = json.loads(sys.argv[2])
 cursor = c.myproject.Artwork.find(find_dict,field_dict)
 
 with open(sys.argv[3], 'w') as f:
-	destCSV = csv.writer(f)
-	line_header = []
-	for field in field_dict.keys():
-		line_header.append(field)
-	destCSV.writerow(line_header)
-	for doc in cursor:
-		doc_line = []
-		for field in field_dict.keys():
-			if field in doc:
-				doc_line.append(doc[field])
-			else:
-				doc_line.append('')
-		destCSV.writerow(doc_line)
+    destCSV = csv.writer(f)
+    line_header = []
+    for field in field_dict.keys():
+        line_header.append(field)
+    destCSV.writerow(line_header)
+    for doc in cursor:
+        doc_line = []
+        for field in field_dict.keys():
+            if field in doc:
+                doc_line.append(doc[field])
+            else:
+                doc_line.append('')
+        destCSV.writerow(doc_line)
 print('Done')
