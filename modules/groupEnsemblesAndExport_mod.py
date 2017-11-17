@@ -18,6 +18,7 @@ format_csv = lambda val: ('"%s"' % val.replace('"', '""') if "," in val or '"' i
 csv_line = lambda dat,keys: ",".join([format_csv(format_field(dat[k])) for k in keys])
 
 if __name__ == "__main__":
+
     fields = ["_id", "acquisition_year", "acquisition_mode", "date_creation", "type", "ensemble_id","domain", "domain_leaf", "domain_deno_for_grid", "domain_description_mst", "collection", "collection_department", "recap_authors", "authors_list", "authors_nationality", "authors_birth_death", "authors_name_complement", "title_notice", "title_list", "comments", "recap_description", "all_realized_operations_history", "hanging_history", "hanging_history_m34", "temporary_exhibitions_m30", "exposition_out_of_folder", "expositions", "expositions_without_current", "inscriptions", "authors"]
     med_fields = fields + ["url", "copyright", "legend", "max_width", "max_height"]
     array_fields = ["all_realized_operations_history", "hanging_history", "hanging_history_m34", "temporary_exhibitions_m30", "expositions", "authors"]
