@@ -46,6 +46,7 @@ import Artwork from './Artwork'
 import { map, shuffleArray, lerp } from './utils'
 import { cubehelix } from 'd3-color'
 import FilterContainer from "./FilterContainer"
+import { Link } from 'react-router-dom'
 
 import './App.css';
 

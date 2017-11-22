@@ -25,7 +25,7 @@ class Node {
 
     this.position = new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r, 0)
     this.color = new THREE.Color(0x000000)
-    this.size = 10
+    this.size = window.innerHeight / 80
 
     this.targetColor = this.color.clone()
 
@@ -105,9 +105,6 @@ class Node {
           }
         }
 
-        // nextLocation.count ++
-        // nextLocation.update()
-
         if (!this.currentOperation) {
           const theta = Math.random() * Math.PI * 2
           const r = nextLocation.rad * (1 + Math.random() * 0.5)
@@ -133,9 +130,6 @@ class Node {
     })
 
     if (this.currentLocation !== this.locationQueue[0]) {
-      if (!!this.currentLocation) {
-        //this.currentLocation.count--
-      }
       this.currentLocation = this.locationQueue[0]
       if (!!this.currentLocation) {
         this.currentLocation.count++
@@ -157,18 +151,6 @@ class Node {
         }
       }
     }
-
-    // if (this.currentLocation !== this.locationQueue[0]) {
-    //   if (!!this.currentLocation) {
-    //     this.currentLocation.count --
-    //     this.currentLocation.update()
-    //   }
-    //   if (!!this.locationQueue[0]) {
-    //     this.currentLocation = this.locationQueue[0]
-    //     this.currentLocation.count ++
-    //     this.currentLocation.update()
-    //   }
-    // }
 
     this.vel.add(this.acc)
     this.position.add(this.vel)

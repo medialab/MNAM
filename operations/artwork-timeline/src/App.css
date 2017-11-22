@@ -91,3 +91,18 @@ h1, p {
     height: 100%;
     z-index: 1;
   }
+
+#nav {
+  position: absolute;
+  right: 50px;
+  text-align: right;
+  list-style: none;
+  z-index: 2;
+}
+
+  #nav a {
+    text-decoration: none;
+    color: white;
+    margin-bottom: 10px;
+    font-size: 11px;
+  }
