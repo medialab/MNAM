@@ -25,7 +25,7 @@ class Node {
 
     this.position = new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r, 0)
     this.color = new THREE.Color(0x000000)
-    this.size = window.innerHeight / 80
+    this.size = window.innerHeight / 70
 
     this.targetColor = this.color.clone()
 

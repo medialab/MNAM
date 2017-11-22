@@ -2,14 +2,8 @@
 /*
 
   oops EXPO?
-  don't swing by when spawning
-  color coding
-  legend
-
-  sort colors in locations
-  playback
-  remove unknown from locations
-  location theta per locationMap distribution
+  trails
+  geolocation trigger
 
 */
 
@@ -50,7 +44,7 @@ const fragmentShader = `
 const initialState = {
   artworks: [],
   timeRange: [10000000000000, 0],
-  artworkCount: 10000,
+  artworkCount: 5000,
   stopList: [
     150000000030351,
     150000000029858,
@@ -121,6 +115,12 @@ class MapApp extends Component {
 
     this.init = this.init.bind(this)
     this.tick = this.tick.bind(this)
+    this.initArtworks = this.initArtworks.bind(this)
+    this.initColors = this.initColors.bind(this)
+    this.initTime = this.initTime.bind(this)
+    this.initScene = this.initScene.bind(this)
+    this.initParticleSystem = this.initParticleSystem.bind(this)
+    this.initLocations = this.initLocations.bind(this)
   }
 
   componentDidMount () {
@@ -128,10 +128,8 @@ class MapApp extends Component {
     console.log('mounted map', Object.keys(this.props).length > 0)
   }
 
-
   init (props) {
     const {
-      timeRange,
       artworkCount,
       stopList,
       colorCodes
@@ -140,15 +138,91 @@ class MapApp extends Component {
     const width = document.getElementById('root').clientWidth
     const height = document.getElementById('root').clientHeight
 
+    const colorList = this.initColors(colorCodes)
+
+    const artworks = this.initArtworks(props.data, artworkCount)
+
+    const timeRange = this.initTime(artworks)
+
+    const currentDate = timeRange[0] - 100
+
+    const {
+      scene,
+      camera,
+      renderer
+    } = this.initScene(width, height)
+
+    const {
+      nodes,
+      particleSystem
+    } = this.initParticleSystem(scene, artworks, width, height)
+
+    const {
+      locationMap,
+      locations,
+      operationTotal
+    } = this.initLocations(nodes)
+
+    this.setState({
+      ...this.state,
+      timeRange,
+      width,
+      height,
+      scene,
+      camera,
+      renderer,
+      nodes,
+      locations,
+      currentDate,
+      particleSystem,
+      operationTotal,
+      colorList
+    })
+
+    this.tick()
+  }
+
+  initTime (artworks) {
+    const timeRange = [10000000000000, 0]
+    timeRange[0] = artworks.reduce((a, b) => {
+      const minOperations = b.operations.reduce((c, d) => {
+        return Math.min(c, new Date(d.date).getTime())
+      }, a)
+      return Math.min(a, minOperations)
+    }, timeRange[0])
+    timeRange[1] = Date.now()
+    return timeRange
+  }
+
+  initScene (width, height) {
+    const scene = new THREE.Scene()
+    const camera = new THREE.PerspectiveCamera( 60, width / height, 0.1, 1000 )
+    camera.position.set(0, 0, (height/2.0) / Math.tan(Math.PI*30.0/180.0))
+    camera.lookAt(new THREE.Vector3(0, 0, 0))
+
+    const renderer = new THREE.WebGLRenderer()
+    renderer.setSize(width, height)
+    this.refs.wrapper.appendChild(renderer.domElement)
+
+    return {
+      scene,
+      camera,
+      renderer
+    }
+  }
+
+  initColors (colorCodes) {
     let colorOffset = 1
-    const colorList = new Array(colorCodes.length).fill(0)
+    return new Array(colorCodes.length).fill(0)
       .map((v, i) => {
         if (colorOffset === 0) colorOffset += 355 / 2
         else colorOffset = 0
         return cubehelix((Math.floor(i / colorCodes.length * 355 / 2) + colorOffset) % 355, 1, 0.5)
       })
+  }
 
-    const artworks = props.data
+  initArtworks (data, artworkCount) {
+    return data
       .filter((d, i) => i < artworkCount)
       .filter((d, i) => {
         return d.opt_field.filter(o => {
@@ -174,36 +248,14 @@ class MapApp extends Component {
             operations
           }
       })
+  }
 
-    console.log(artworks.length, 'artworks loaded')
-
-    timeRange[0] = artworks.reduce((a, b) => {
-      const minOperations = b.operations.reduce((c, d) => {
-        return Math.min(c, new Date(d.date).getTime())
-      }, a)
-      return Math.min(a, minOperations)
-    }, timeRange[0])
-
-    timeRange[1] = Date.now()
-
-
-    var scene = new THREE.Scene()
-    var camera = new THREE.PerspectiveCamera( 60, width / height, 0.1, 1000 )
-    // camera.position.set(0, 0, (height/2.0) / Math.tan(Math.PI*60.0 / 180.0))
-    camera.position.set(0, 0, (height/2.0) / Math.tan(Math.PI*30.0/180.0))
-    camera.lookAt(new THREE.Vector3(0, 0, 0))
-
-    var renderer = new THREE.WebGLRenderer()
-    renderer.setSize(width, height)
-    this.refs.wrapper.appendChild(renderer.domElement)
-
+  initParticleSystem (scene, artworks, width, height) {
     var particleSystem, uniforms, geometry
     var particles = 100000
-
     uniforms = {
       texture:   { value: new THREE.TextureLoader().load( process.env.PUBLIC_URL + '/node.png' ) }
     }
-
     var shaderMaterial = new THREE.ShaderMaterial( {
       uniforms:       uniforms,
       vertexShader:   vertexShader,
@@ -213,14 +265,10 @@ class MapApp extends Component {
       transparent:    true,
       vertexColors:   true
     })
-
-    var radius = 200
     geometry = new THREE.BufferGeometry()
-
     var positions = []
     var colors = []
     var sizes = []
-
     const nodes = artworks.map((a, i) => {
       const node = new Node(a, scene, width, height, i)
       positions.push(node.position.x, node.position.y, node.position.z)
@@ -228,15 +276,18 @@ class MapApp extends Component {
       sizes.push(node.size)
       return node
     })
-
     geometry.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) )
     geometry.addAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) )
     geometry.addAttribute( 'size', new THREE.Float32BufferAttribute( sizes, 1 ).setDynamic( true ) )
-
     particleSystem = new THREE.Points(geometry, shaderMaterial)
-
     scene.add(particleSystem)
+    return {
+      nodes,
+      particleSystem
+    }
+  }
 
+  initLocations (nodes) {
     let operationTotal = 0
     const locationMap = {}
     nodes.forEach(n => {
@@ -308,42 +359,10 @@ class MapApp extends Component {
         theta += thetaOffset / 2
       })
 
-    const currentDate = timeRange[0] - 100
-
-    const colorBuckets = {}
-    nodes.forEach(n => {
-      n.operations.forEach(o => {
-        colorCodes.some((codes, j) => {
-          if (codes.indexOf(o.opt_code) > -1) {
-            if (!colorBuckets[j]) colorBuckets[j] = 0
-            colorBuckets[j] ++
-            return true
-          } else return false
-        })
-      })
-    })
-
-    console.log('test', colorList.map(c => c.rgb()))
-
-    this.setState({
-      ...this.state,
-      timeRange,
-      width,
-      height,
-      scene,
-      camera,
-      renderer,
-      nodes,
-      locations,
-      currentDate,
-      particleSystem,
-      operationTotal,
-      colorList,
-      colorBuckets
-    })
-
-
-    this.tick()
+    return {
+      locationMap,
+      locations
+    }
   }
 
   tick () {
