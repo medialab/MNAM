@@ -18,52 +18,15 @@ import Node from './Node'
 import Location from './Location'
 import { Link } from 'react-router-dom'
 
+import { vertexShader, fragmentShader } from './particleShaders'
+
 import './App.css';
-
-const vertexShader = `
-  attribute float size;
-  varying vec3 vColor;
-  void main() {
-    vColor = color;
-    vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
-    gl_PointSize = size * ( 300.0 / -mvPosition.z );
-    gl_Position = projectionMatrix * mvPosition;
-  }
-`
-
-const fragmentShader = `
-  uniform sampler2D texture;
-  varying vec3 vColor;
-  void main() {
-    gl_FragColor = vec4( vColor, 1.0 );
-    gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
-  }
-`
 
 
 const initialState = {
   artworks: [],
   timeRange: [10000000000000, 0],
   artworkCount: 5000,
-  stopList: [
-    150000000030351,
-    150000000029858,
-    150000000017493,
-    150000000026300,
-    150000000039547,
-    150000000022506,
-    150000000005353,
-    150000000014640,
-    150000000066484,
-    150000000455601,
-    150000000043959,
-    150000000045372,
-    150000000019231,
-    150000000030904,
-    150000000023706,
-    150000000017432,
-    150000000012643
-  ],
   nodes: [],
   nodeGrid: [],
   locations: [],
@@ -86,23 +49,10 @@ const initialState = {
     ['700','770','771','772','960'],
     ['950'],
     ['901']],
-  colorLabels: [
-    'Déplacement vers localisation interne',
-    'Déplacement vers localisation externe',
-    'Constat oeuvre',
-    'Intervention oeuvre',
-    'Fiche technique - habillage',
-    'Fiche technique - emballage',
-    'Courriers',
-    'Opérations diverses',
-    'Perte ou vol',
-    'Photographies',
-    'Récolement',
-    'Evaluation valeurs d\'assurance',
-    'Inventaire réglementaire'
-  ],
   colorList: [],
-  colorBuckets: {}
+  segmentCount: 1000,
+  frameCount: 0,
+  moveTotal: 0
 }
 
 
@@ -121,6 +71,7 @@ class MapApp extends Component {
     this.initScene = this.initScene.bind(this)
     this.initParticleSystem = this.initParticleSystem.bind(this)
     this.initLocations = this.initLocations.bind(this)
+    this.initLineSystem = this.initLineSystem.bind(this)
   }
 
   componentDidMount () {
@@ -131,6 +82,7 @@ class MapApp extends Component {
   init (props) {
     const {
       artworkCount,
+      segmentCount,
       stopList,
       colorCodes
     } = this.state
@@ -158,6 +110,10 @@ class MapApp extends Component {
     } = this.initParticleSystem(scene, artworks, width, height)
 
     const {
+      lineSystem
+    } = this.initLineSystem(scene, segmentCount)
+
+    const {
       locationMap,
       locations,
       operationTotal
@@ -175,6 +131,7 @@ class MapApp extends Component {
       locations,
       currentDate,
       particleSystem,
+      lineSystem,
       operationTotal,
       colorList
     })
@@ -287,6 +244,18 @@ class MapApp extends Component {
     }
   }
 
+  initLineSystem (scene, segmentCount) {
+    const positions = new Array(segmentCount * 3 * 2).fill(0).map(v => 0)
+    const geometry = new THREE.BufferGeometry();
+    geometry.addAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
+    const material = new THREE.LineBasicMaterial({color: 0x0000ff})
+    const lineSystem = new THREE.LineSegments(geometry, material)
+    scene.add(lineSystem)
+    return {
+      lineSystem
+    }
+  }
+
   initLocations (nodes) {
     let operationTotal = 0
     const locationMap = {}
@@ -371,6 +340,7 @@ class MapApp extends Component {
       camera,
       renderer,
       particleSystem,
+      lineSystem,
       nodes,
       locations,
       speed,
@@ -379,10 +349,13 @@ class MapApp extends Component {
       nodeGrid,
       colorList,
       colorBuckets,
-      colorCodes
+      colorCodes,
+      segmentCount,
+      frameCount,
     } = this.state
 
     let {
+      moveTotal,
       currentDate
     } = this.state
 
@@ -406,7 +379,7 @@ class MapApp extends Component {
       )
 
 
-    let neighboringNodesCount = 0
+    const lastMoves = []
     let pushedneighboringNodesCount = 0
     nodes.forEach((n, i) => {
       
@@ -432,16 +405,47 @@ class MapApp extends Component {
           pushedneighboringNodesCount ++
         }
 
+        const lastPos = new THREE.Vector3(attributes.position.array[i * 3 + 0], attributes.position.array[i * 3 + 1], attributes.position.array[i * 3 + 2])
+
+        if (n.life > 1 && lastPos.distanceTo(pos) > 5) {
+          lastMoves.push(
+            lastPos.x,
+            lastPos.y,
+            lastPos.z,
+            pos.x,
+            pos.y,
+            pos.z
+          )
+        }
+
         attributes.position.array[i * 3 + 0] = pos.x
         attributes.position.array[i * 3 + 1] = pos.y
         attributes.position.array[i * 3 + 2] = pos.z
         attributes.color.array[i * 3 + 0] = n.color.r
         attributes.color.array[i * 3 + 1] = n.color.g
         attributes.color.array[i * 3 + 2] = n.color.b
+
       }
     })
     attributes.position.needsUpdate = true
     attributes.color.needsUpdate = true
+
+    const lineGeometry = lineSystem.geometry.attributes.position
+
+    lineGeometry.array = lineGeometry.array.slice(moveTotal.length)
+
+    // hacked together
+    lineGeometry.array.reverse()
+    for (let i = 0; i < lineGeometry.array.length; i++) {
+      if (i + lastMoves.length >= lineGeometry.array.length) {
+        lineGeometry.array[i] = lastMoves[lineGeometry.array.length - i - 1]
+      } else {
+        lineGeometry.array[i] = lineGeometry.array[i + lastMoves.length]
+      }
+    }
+    lineGeometry.array.reverse()
+
+    lineGeometry.needsUpdate = true
 
     renderer.render(scene, camera)
 
@@ -449,7 +453,9 @@ class MapApp extends Component {
     this.setState({
       ...this.state,
       currentDate: Math.min(Date.now(), currentDate + speed),
-      nodeGrid: newNodeGrid
+      nodeGrid: newNodeGrid,
+      frameCount: frameCount + 1,
+      moveTotal
     })
     
     requestAnimationFrame(this.tick)
@@ -465,7 +471,7 @@ class MapApp extends Component {
       timeRange,
       locations,
       operationTotal,
-      currentDate
+      currentDate,
     } = this.state
 
     // console.log('aga', locations.reduce((a, b) => a.concat(b.children), []))
@@ -515,19 +521,6 @@ class MapApp extends Component {
             </text>
           </g>
         )
-      // return (
-
-      //   <div
-      //     style={{
-      //       color: 'white',
-      //       ,
-      //       fontSize: 11,
-      //       position: 'absolute'
-      //     }}
-      //   >
-      //     
-      //   </div>
-      // )
     })
 
     const dateString = `${new Date(currentDate).getMonth() + 1} / ${new Date(currentDate).getYear() + 1900}`

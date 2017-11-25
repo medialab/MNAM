@@ -36,7 +36,7 @@ class Node {
     this.damping = 0.85
     this.attractionToTarget = 0.01
     this.nodeRepulsion = 0.001
-    this.active = false
+    this.life = -1
     this.firstRun = true
 
   }
@@ -52,14 +52,14 @@ class Node {
       } else {
         if (o.opt_branch !== 'unknown') {
           latestOperation = o
-          this.active = true
+          if (this.life === -1) this.life = 0
         }
         latestCode = o.opt_code
         return false
       }
     })
     
-    if (!this.active) return null
+    if (this.life === -1) return null
 
     if (!!latestCode) {
       // console.log(latestCode)
@@ -76,7 +76,7 @@ class Node {
 
     if (latestOperation !== this.currentOperation) {
       if (!this.currentOperation) {
-        this.targetColor.setHSL( Math.random(), 1.0, 0.5 )
+        this.targetColor.setHSL(Math.random(), 1.0, 0.5)
       }
 
       let nextLocation = locations.find(l => l.id === latestOperation.opt_branch.split('_')[0])
@@ -160,6 +160,7 @@ class Node {
     this.color.lerp(this.targetColor, 0.15)
 
     this.firstRun = false
+    this.life ++
 
     return this.position
 
