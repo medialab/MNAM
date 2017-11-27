@@ -12,6 +12,7 @@ class Node {
       })
 
     this.update = this.update.bind(this)
+    this.switchMode = this.switchMode.bind(this)
 
     this.currentOperation = null
     this.locationQueue = []
@@ -41,6 +42,12 @@ class Node {
 
   }
 
+  switchMode (currentViewType) {
+    this.currentOperation = this.operations[this.operations.indexOf(this.currentOperation) - 1]
+    this.locationQueue = []
+    this.currentLocation = null
+  }
+
   update (date, locations, nodes, colorList, colorCodes, currentViewType) {
     let latestOperation = null
     let latestCode = null
@@ -48,17 +55,10 @@ class Node {
       if (o.date > date) {
         return true
       } else {
-        // if (currentViewType === 'museum') {
-          if (o.opt_branch !== 'unknown') {
-            latestOperation = o
-            if (this.life === -1) this.life = 0
-          }
-        // } else if (currentViewType === 'world') {
-        //   if (!!o.loc) {
-        //     latestOperation = o
-        //     if (this.life === -1) this.life = 0
-        //   }
-        // }
+        if (o.opt_branch !== 'unknown') {
+          latestOperation = o
+          if (this.life === -1) this.life = 0
+        }
         latestCode = o.opt_code
         return false
       }
@@ -119,8 +119,8 @@ class Node {
       }
 
       if (currentViewType === 'world') {
-        const loc = latestOperation.loc || 'france'
-        let nextLocation = locations.find(l => l.id === loc)
+        const loc = latestOperation.city || 'centre pompidou'
+        let nextLocation = locations.find(l => l.city === loc)
         if (!!nextLocation && this.locationQueue[this.locationQueue.length - 1] !== nextLocation) {
           this.locationQueue.push(nextLocation)
 
@@ -160,6 +160,7 @@ class Node {
     if (this.currentLocation !== this.locationQueue[0]) {
       this.currentLocation = this.locationQueue[0]
       if (!!this.currentLocation) {
+        if (this.currentLocation.id === 'usa') console.log('LOL1!')
         this.currentLocation.count++
       }
     }
@@ -174,7 +175,8 @@ class Node {
       } else if (this.locationQueue.length > 1) {
         this.currentLocation.count--
         this.locationQueue.shift()
-        if (!!this.locationQueue[0]) {
+        // TODO: currentViewType === 'museum' should not be necessary
+        if (!!this.locationQueue[0] && currentViewType === 'museum') {
           this.locationQueue[0].count++
         }
       }

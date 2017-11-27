@@ -2,20 +2,15 @@
 
 /*
 
-  oops EXPO?
   trails
-  geolocation trigger
-  fix target sequencing
-
-  KNOWN ISSUES: city and country names including '-'
-
-  physics countries
   projection
-  switch between 2 modes
-  only keep most traveling artworks
-  trails
+  better geo layout
   record
+  fix target sequencing
+  nodes should not pop in middle of location
+  remove back and forths
 
+  oops EXPO?
 
 */
 
@@ -48,7 +43,7 @@ const initialState = {
   recordingSessionName: dateToString(new Date()),
   artworks: [],
   timeRange: [10000000000000, 0],
-  artworkCount: 5000,
+  artworkCount: 1500,
   nodes: [],
   nodeGrid: [],
   locations: [],
@@ -76,7 +71,7 @@ const initialState = {
   frameCount: 0,
   moveTotal: 0,
   viewTypes: ['museum', 'world'],
-  currentViewType: 'world' 
+  currentViewType: 'museum' 
 }
 
 
@@ -125,8 +120,9 @@ class MapApp extends Component {
       .filter(row => !!row[6] && row[6].length > 0)
       .map(row => {
         return {
-          // loc: `${row[5]}-${row[6]}`,
           loc: (`${row[6]}`).toLowerCase(),
+          city: (`${row[5]}`).toLowerCase(),
+          country: (`${row[6]}`).toLowerCase(),
           lat: parseFloat(row[10]),
           lon: parseFloat(row[11])
         }
@@ -218,20 +214,40 @@ class MapApp extends Component {
 
   initArtworks (data, artworkCount, exhibitions) {
 
+    const countryList = []
     const cityList = []
     exhibitions.forEach(e => {
-      if (cityList.indexOf(e.loc) === -1) cityList.push(e.loc)
+      if (countryList.indexOf(e.country) === -1) countryList.push(e.country)
+      if (cityList.indexOf(e.city) === -1) cityList.push(e.city)
     })
 
-    console.log('woop', cityList)
-
     return data
-      .filter((d, i) => i < artworkCount)
-      .filter((d, i) => {
-        return d.opt_field.filter(o => {
-          return !!o.opt_branch && o.opt_branch !== 'unknown'
-        }).length > 5
-      })
+      .slice(0)
+      .sort((a, b) => b.opt_field.filter(o => o.opt_branch === 'EXPO').length - a.opt_field.filter(o => o.opt_branch === 'EXPO').length)
+      .filter((d, i) => i < artworkCount / 2)
+      .concat(data
+        .filter((d, i) => {
+          return d.opt_field.filter(o => {
+            return !!o.opt_branch && o.opt_branch !== 'unknown'
+          }).length > 5
+        })
+        .filter((d, i) => i < artworkCount / 2)
+      )
+
+      // .filter((d, i) => {
+      //   return d.opt_field.filter(o => {
+      //     return !!o.opt_branch && o.opt_branch === 'EXPO' 
+      //   }).length > 0
+      // })
+      // .filter((d, i) => {
+      //   return d.opt_field.filter(o => {
+      //     return !!o.opt_branch && o.opt_branch !== 'unknown'
+      //   }).length > 5
+      // })
+      // .sort((a, b) => b.opt_field.filter(o => !!o.opt_branch && o.opt_branch !== 'unknown').length - a.opt_field.filter(o => !!o.opt_branch && o.opt_branch !== 'unknown').length)
+      // .sort((a, b) => b.opt_field.filter(o => o.opt_branch === 'EXPO').length - a.opt_field.filter(o => o.opt_branch === 'EXPO').length)
+      // .sort((a, b) => b.opt_field.length - a.opt_field.length)
+      // .filter((d, i) => i < artworkCount)
       .map(a => {
         const operations = a.opt_field
           .filter(o => {
@@ -242,7 +258,7 @@ class MapApp extends Component {
           })
           .map(o => {
 
-            let loc = null
+            let country = null
             if (o.opt_branch === 'EXPO') {
               const detail = o.opt_detail
                 .split('-Dossier')[0]
@@ -250,21 +266,47 @@ class MapApp extends Component {
                 .slice(-2)
                 .join('-')
                 .toLowerCase()
-              cityList.some(c => {
-                // TODO: sort cityList by longest names
+              countryList.some(c => {
+                // TODO: sort countryList by longest names
                 if (detail.indexOf(c) > -1) {
-                  loc = c
+                  country = c
                   return true
                 } else {
                   return false
                 }
               })
+              if (country === null) {
+                if(detail === 'moscow house of photography') country = 'usa'
+                if(detail === 'états-unis') country = 'fédération de russie'
+                if(detail === 'taïpei-république de chine (taïwan)') country = 'république de chine, taïwan'
+                if (country === null) console.log('cant find country:', detail)
+              } else {
+                // console.log('hmm?', loc, detail)
+              }
+            }
 
-              if (loc === null) {
-                if(detail === 'moscow house of photography') loc = 'usa'
-                if(detail === 'états-unis') loc = 'fédération de russie'
-                if(detail === 'taïpei-république de chine (taïwan)') loc = 'république de chine, taïwan'
-                if (loc === null) console.log('cant find location:', detail)
+            let city = null
+            if (o.opt_branch === 'EXPO') {
+              const detail = o.opt_detail
+                .split('-Dossier')[0]
+                // .split('-')
+                // .slice(-3)
+                // .join('-')
+                .toLowerCase()
+              cityList.some(c => {
+                // TODO: sort cityList by longest names
+                if (detail.indexOf(c) > -1) {
+                  city = c
+                  return true
+                } else {
+                  return false
+                }
+              })
+              if (city === null) {
+                if(detail === 'moscow house of photography') city = 'usa'
+                if(detail === 'états-unis') city = 'fédération de russie'
+                if(detail === 'taïpei-république de chine (taïwan)') city = 'république de chine, taïwan'
+                if (city === null) console.log('cant find city:', detail)
               } else {
                 // console.log('hmm?', loc, detail)
               }
@@ -273,9 +315,12 @@ class MapApp extends Component {
             return {
               ...o,
               date: new Date(o.date).getTime(),
-              loc
+              loc: country,
+              country,
+              city
             }
           })
+          .filter(o => o.opt_branch !== 'EXPO' || (!!o.country && !!o.city))
 
         return {
           ...a,
@@ -406,26 +451,46 @@ class MapApp extends Component {
 
     nodes.forEach(n => {
       n.operations
-        .filter(o => !!o.loc)
+        .filter(o => !!o.city)
         .forEach(o => {
-          if (!cityMap[o.loc]) cityMap[o.loc] = 0 
-          cityMap[o.loc] ++
+          if (!cityMap[o.city]) cityMap[o.city] = 0 
+          cityMap[o.city] ++
         })
     })
 
     let cities = Object.keys(cityMap)
-      .filter(id => !!exhibitions.find(e => e.loc === id))
+      .filter(id => !!exhibitions.find(e => e.city === id))
       .map(id => {
-        const exhibition = exhibitions.find(e => e.loc === id)
+        const exhibition = exhibitions.find(e => e.city === id)
         const city = new Location(id, cityMap[id])
-        // city.displayName = id
+        city.displayName = id
+        city.setLocation(exhibition.country, exhibition.city)
         city.setFinalRad()
+        if (exhibition.city === 'moscou') {
+          exhibition.lon = 37.3523184
+          exhibition.lat = 55.7498598
+        }
         city.setGeoLayout(
           map(exhibition.lon, -180, 180, -width / 2, width / 2),
           map(exhibition.lat, -90, 90, -height / 2, height / 2)
         )
         return city
       })
+      .concat(
+        new Array(1)
+        .fill(0)
+        .map(() => {
+          const center = new Location('centre pompidou', 0)
+          center.setLocation('france', 'centre pompidou')
+          center.setFinalRad()
+          center.displayName = 'centre pompidou'
+          center.setGeoLayout(
+            map(2.3500563, -180, 180, -width / 2, width / 2),
+            map(48.8606455, -90, 90, -height / 2, height / 2)
+          )
+          return center
+        })
+      )
 
     console.log('aga', cities, cityMap)
 
@@ -519,7 +584,7 @@ class MapApp extends Component {
 
         const lastPos = new THREE.Vector3(attributes.position.array[i * 3 + 0], attributes.position.array[i * 3 + 1], attributes.position.array[i * 3 + 2])
 
-        if (n.life > 1 && lastPos.distanceTo(pos) > 5) {
+        if (n.life > 1 && lastPos.distanceTo(pos) > 1.5) {
           lastMoves.push(
             lastPos.x,
             lastPos.y,
@@ -546,16 +611,16 @@ class MapApp extends Component {
 
     lineGeometry.array = lineGeometry.array.slice(moveTotal.length)
 
-    // refactor
-    // lineGeometry.array.reverse()
-    // for (let i = 0; i < lineGeometry.array.length; i++) {
-    //   if (i + lastMoves.length >= lineGeometry.array.length) {
-    //     lineGeometry.array[i] = lastMoves[lineGeometry.array.length - i - 1]
-    //   } else {
-    //     lineGeometry.array[i] = lineGeometry.array[i + lastMoves.length]
-    //   }
-    // }
-    // lineGeometry.array.reverse()
+    // TODO: refactor
+    lineGeometry.array.reverse()
+    for (let i = 0; i < lineGeometry.array.length; i++) {
+      if (i + lastMoves.length >= lineGeometry.array.length) {
+        lineGeometry.array[i] = lastMoves[lineGeometry.array.length - i - 1]
+      } else {
+        lineGeometry.array[i] = lineGeometry.array[i + lastMoves.length]
+      }
+    }
+    lineGeometry.array.reverse()
 
     lineGeometry.needsUpdate = true
 
@@ -630,7 +695,7 @@ class MapApp extends Component {
     const {
       width,
       height,
-      artworks,
+      nodes,
       timeRange,
       locations,
       cities,
@@ -640,6 +705,9 @@ class MapApp extends Component {
     } = this.state
 
     const currentLocations = currentViewType === 'museum' ? locations : cities.filter(c => c.count > 0)
+    const topLocations = currentViewType === 'museum' ? currentLocations : currentLocations
+      .sort((a, b) => b.count - a.count)
+      .filter((c, i) => i < 8 && c.count > 4)
 
     const locationLabels = currentLocations
       .concat(currentLocations.reduce((a, b) => a.concat(b.children), []))
@@ -674,16 +742,19 @@ class MapApp extends Component {
                 />
               )
             }
-            <text
-              fill={'white'}
-              fontSize={ l.children.length === 0 && !!l.parent ? 11 : 16 }
-              x={ l.children.length === 0 && !!l.parent ? Math.cos(theta) * rad : 0 }
-              y={ l.children.length === 0 && !!l.parent ? Math.sin(theta) * rad : 0 + (l.children.length === 0 && !!l.parent ? 0 : 20) }
-              textAnchor={ 'middle' }
-              alignmentBaseline={ 'central' }
-            >
-              { l.displayName }
-            </text>
+            {
+              topLocations.indexOf(l) > -1 &&
+              <text
+                fill={'white'}
+                fontSize={ l.children.length === 0 && !!l.parent ? 11 : 16 }
+                x={ l.children.length === 0 && !!l.parent ? Math.cos(theta) * rad : 0 }
+                y={ l.children.length === 0 && !!l.parent ? Math.sin(theta) * rad : 0 + (l.children.length === 0 && !!l.parent ? 0 : 20) }
+                textAnchor={ 'middle' }
+                alignmentBaseline={ 'central' }
+              >
+                { l.displayName }
+              </text>
+            }
           </g>
         )
     })
@@ -713,7 +784,21 @@ class MapApp extends Component {
                     color: viewType === currentViewType ? 'white' : '#aaa',
                     cursor: 'pointer'
                   }}
-                  onClick={() => { this.switchViewType(viewType) }}
+                  onClick={() => { 
+                    this.switchViewType(viewType)
+                    nodes.forEach(n => {
+                      n.switchMode(currentDate, viewType)
+                    })
+                    locations.forEach(l => {
+                      l.count = 0
+                      l.children.forEach(c => {
+                        c.count = 0
+                      })
+                    })
+                    cities.forEach(l => {
+                      l.count = 0
+                    })
+                  }}
                   key={ `viewType-${i}` }
                 >
                   { viewType }

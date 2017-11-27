@@ -15,13 +15,6 @@ class Location {
     this.children = []
     this.total = total
 
-    this.update = this.update.bind(this)
-    this.updateGeo = this.updateGeo.bind(this)
-    this.addChildren = this.addChildren.bind(this)
-    this.setLayout = this.setLayout.bind(this)
-    this.setGeoLayout = this.setGeoLayout.bind(this)
-    this.setFinalRad = this.setFinalRad.bind(this)
-
     this.theta = 0
     this.thetaOffset = 0
     this.parent = null
@@ -31,11 +24,27 @@ class Location {
     this.damping = 0.85
     this.cityRepulsion = 0.01
     this.attractionToTarget = 0.001
+
+    this.city = null
+    this.country = null
+
+    this.update = this.update.bind(this)
+    this.updateGeo = this.updateGeo.bind(this)
+    this.addChildren = this.addChildren.bind(this)
+    this.setLayout = this.setLayout.bind(this)
+    this.setGeoLayout = this.setGeoLayout.bind(this)
+    this.setFinalRad = this.setFinalRad.bind(this)
+    this.setLocation = this.setLocation.bind(this)
   }
 
   addChildren (l) {
     this.children.push(l)
     l.parent = this
+  }
+
+  setLocation (country, city) {
+    this.country = country
+    this.city = city
   }
 
   setFinalRad () {
@@ -63,7 +72,7 @@ class Location {
   }
 
   update () {
-    this.rad = Math.max(this.children.length > 0 ? 35 : 10, Math.sqrt(this.nodeSize / 4 * this.count))
+    this.rad = Math.max(this.children.length > 0 ? 35 : 10, Math.sqrt(this.nodeSize / 3 * this.count))
     if (this.children.length > 0) this.rad = 35
 
     let theta = this.theta - this.thetaOffset / 2
@@ -78,30 +87,32 @@ class Location {
   }
 
   updateGeo (cities) {
-    this.rad = Math.max(1, Math.sqrt(this.nodeSize / 4 * this.count))
+    this.rad = Math.max(1, Math.sqrt(this.nodeSize / 3 * this.count))
 
     if (this.count === 0) return
 
-    cities
-      .filter(c => c.count > 0)
-      .forEach((c, i) => {
-        if (this.position.distanceTo(c.position) < (this.rad + c.rad + 20)) {
-          // console.log('aga')
-          const distanceToTarget = this.position.distanceTo(c.position)
-          const force = c.position.clone().sub(this.position)
-          force.negate()
-          force.normalize()
-          force.multiplyScalar(((this.rad + c.rad + 30) - distanceToTarget) * this.cityRepulsion)
-          this.acc.add(force)
-        }
-      })
+    if (this.id !== 'centre pompidou') {
+      cities
+        .filter(c => c.count > 0)
+        .forEach((c, i) => {
+          if (this.position.distanceTo(c.position) < (this.rad + c.rad + 20)) {
+            // console.log('aga')
+            const distanceToTarget = this.position.distanceTo(c.position)
+            const force = c.position.clone().sub(this.position)
+            force.negate()
+            force.normalize()
+            force.multiplyScalar(((this.rad + c.rad + 20) - distanceToTarget) * this.cityRepulsion)
+            this.acc.add(force)
+          }
+        })
+    }
 
-    // const attraction = map(Math.sqrt(this.rad), 1, Math.sqrt(50), 0, 0.1)
-    // const distanceToCoords = this.position.distanceTo(this.originalPosition)
-    // const force = this.originalPosition.clone().sub(this.position)
-    // force.normalize()
-    // force.multiplyScalar(distanceToCoords * attraction)
-    // this.acc.add(force)
+    const attraction = this.id === 'centre pompidou' ? 0.1 : 0.0001
+    const distanceToCoords = this.position.distanceTo(this.originalPosition)
+    const force = this.originalPosition.clone().sub(this.position)
+    force.normalize()
+    force.multiplyScalar(distanceToCoords * attraction)
+    this.acc.add(force)
 
     this.vel.add(this.acc)
     this.position.add(this.vel)
