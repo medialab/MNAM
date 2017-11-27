@@ -41,19 +41,24 @@ class Node {
 
   }
 
-  update (date, locations, nodes, colorList, colorCodes) {
-
-
+  update (date, locations, nodes, colorList, colorCodes, currentViewType) {
     let latestOperation = null
     let latestCode = null
     this.operations.some(o => {
       if (o.date > date) {
         return true
       } else {
-        if (o.opt_branch !== 'unknown') {
-          latestOperation = o
-          if (this.life === -1) this.life = 0
-        }
+        // if (currentViewType === 'museum') {
+          if (o.opt_branch !== 'unknown') {
+            latestOperation = o
+            if (this.life === -1) this.life = 0
+          }
+        // } else if (currentViewType === 'world') {
+        //   if (!!o.loc) {
+        //     latestOperation = o
+        //     if (this.life === -1) this.life = 0
+        //   }
+        // }
         latestCode = o.opt_code
         return false
       }
@@ -79,41 +84,64 @@ class Node {
         this.targetColor.setHSL(Math.random(), 1.0, 0.5)
       }
 
-      let nextLocation = locations.find(l => l.id === latestOperation.opt_branch.split('_')[0])
+      if (currentViewType === 'museum') {
+        let nextLocation = locations.find(l => l.id === latestOperation.opt_branch.split('_')[0])
+        if (!!nextLocation && this.locationQueue[this.locationQueue.length - 1] !== nextLocation) {
+          
+          if (!!this.currentLocation && 
+            nextLocation.id.split('_')[0] !== this.currentLocation.id.split('_')[0] &&
+            !!this.currentLocation.parent
+          ) {
+            this.locationQueue.push(this.currentLocation.parent)
+          }
+          
+          this.locationQueue.push(nextLocation)
 
-
-      if (!!nextLocation && this.locationQueue[this.locationQueue.length - 1] !== nextLocation) {
-        
-        if (!!this.currentLocation && 
-          nextLocation.id.split('_')[0] !== this.currentLocation.id.split('_')[0] &&
-          !!this.currentLocation.parent
-        ) {
-          this.locationQueue.push(this.currentLocation.parent)
-        }
-        
-        this.locationQueue.push(nextLocation)
-
-        if (latestOperation.opt_branch.indexOf('_') > 0) {
-          nextLocation = nextLocation.children.find(l => l.id === latestOperation.opt_branch)
-          if (!nextLocation) {
-            console.log('could not find children location')
-          } else {
-            if (this.firstRun) {
-              this.locationQueue.pop()
+          if (latestOperation.opt_branch.indexOf('_') > 0) {
+            nextLocation = nextLocation.children.find(l => l.id === latestOperation.opt_branch)
+            if (!nextLocation) {
+              console.log('could not find children location')
+            } else {
+              if (this.firstRun) {
+                this.locationQueue.pop()
+              }
+              this.locationQueue.push(nextLocation)
             }
-            this.locationQueue.push(nextLocation)
+          }
+
+          if (!this.currentOperation) {
+            const theta = Math.random() * Math.PI * 2
+            const r = nextLocation.rad * (1 + Math.random() * 0.5)
+            const offset = new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r)
+            this.position.copy(nextLocation.position.clone().add(offset))
           }
         }
-
-        if (!this.currentOperation) {
-          const theta = Math.random() * Math.PI * 2
-          const r = nextLocation.rad * (1 + Math.random() * 0.5)
-          const offset = new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r)
-          this.position.copy(nextLocation.position.clone().add(offset))
-        }
-      } else {
-        console.log('oops', latestOperation.opt_branch)
       }
+
+      if (currentViewType === 'world') {
+        const loc = latestOperation.loc || 'france'
+        let nextLocation = locations.find(l => l.id === loc)
+        if (!!nextLocation && this.locationQueue[this.locationQueue.length - 1] !== nextLocation) {
+          this.locationQueue.push(nextLocation)
+
+          if (!this.currentOperation) {
+            // const theta = Math.random() * Math.PI * 2
+            // const r = nextLocation.rad * (1 + Math.random() * 0.5)
+            // const offset = new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r)
+            // this.position.copy(nextLocation.position.clone().add(offset))
+            this.position.copy(nextLocation.position.clone())
+          }
+        } else {
+          if (!nextLocation) {
+            console.log(loc)
+          }
+        }
+      }
+
+
+      // } else {
+      //   console.log('oops', latestOperation.opt_branch)
+      // }
 
       this.currentOperation = latestOperation
     }

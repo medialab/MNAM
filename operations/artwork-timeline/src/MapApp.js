@@ -1,16 +1,28 @@
 
+
 /*
 
   oops EXPO?
   trails
   geolocation trigger
+  fix target sequencing
+
+  KNOWN ISSUES: city and country names including '-'
+
+  physics countries
+  projection
+  switch between 2 modes
+  only keep most traveling artworks
+  trails
+  record
+
 
 */
 
 
 import React, { Component } from 'react'
 import Artwork from './Artwork'
-import { map, shuffleArray, lerp } from './utils'
+import { map, shuffleArray, lerp, dataURItoBlob, dateToString } from './utils'
 import { cubehelix } from 'd3-color'
 import * as THREE from 'three'
 
@@ -20,21 +32,31 @@ import { Link } from 'react-router-dom'
 
 import { vertexShader, fragmentShader } from './particleShaders'
 
+import parseCSV from 'csv-parse/lib/sync'
+
 import './App.css';
+
+import domtoimage from 'dom-to-image'
+import uploader from 'base64-image-upload'
+
+import html2canvas from 'html2canvas'
+import CanvasToTIFF from './canvas-to-tiff'
 
 
 const initialState = {
+  recording: false,
+  recordingSessionName: dateToString(new Date()),
   artworks: [],
   timeRange: [10000000000000, 0],
   artworkCount: 5000,
   nodes: [],
   nodeGrid: [],
   locations: [],
+  cities: [],
   currentDate: new Date(0),
   speed: 1000 * 60 * 60 * 24,
   width: 100,
   height: 100,
-  operationTotal: 0,
   colorCodes: 
     [['210I','211I','212I','213I','214I','215I','216I','220I','221I','241I','242I','260I','261I','262I','270I','271I','299I','730I','740I','750I','760I'],
     ['210E','211E','212E','213E','216E','220E','221E','230E','240E','241E','242E','244E','250E','260E','261E','262E','270E','280E','281E','282E','290E','299E','730E','740E','750E','760E'],
@@ -52,7 +74,9 @@ const initialState = {
   colorList: [],
   segmentCount: 1000,
   frameCount: 0,
-  moveTotal: 0
+  moveTotal: 0,
+  viewTypes: ['museum', 'world'],
+  currentViewType: 'world' 
 }
 
 
@@ -72,6 +96,8 @@ class MapApp extends Component {
     this.initParticleSystem = this.initParticleSystem.bind(this)
     this.initLocations = this.initLocations.bind(this)
     this.initLineSystem = this.initLineSystem.bind(this)
+    this.switchViewType = this.switchViewType.bind(this)
+    this.initCities = this.initCities.bind(this)
   }
 
   componentDidMount () {
@@ -92,7 +118,21 @@ class MapApp extends Component {
 
     const colorList = this.initColors(colorCodes)
 
-    const artworks = this.initArtworks(props.data, artworkCount)
+    const exhibitions = parseCSV(props.exhibitionData)
+      .slice(1)
+      .filter(row => !isNaN(new Date(row[7]).getTime()) && !isNaN(new Date(row[8]).getTime()))
+      .filter(row => row[4] !== 'MNAM, Centre Georges Pompidou')
+      .filter(row => !!row[6] && row[6].length > 0)
+      .map(row => {
+        return {
+          // loc: `${row[5]}-${row[6]}`,
+          loc: (`${row[6]}`).toLowerCase(),
+          lat: parseFloat(row[10]),
+          lon: parseFloat(row[11])
+        }
+      })
+
+    const artworks = this.initArtworks(props.data, artworkCount, exhibitions)
 
     const timeRange = this.initTime(artworks)
 
@@ -113,11 +153,9 @@ class MapApp extends Component {
       lineSystem
     } = this.initLineSystem(scene, segmentCount)
 
-    const {
-      locationMap,
-      locations,
-      operationTotal
-    } = this.initLocations(nodes)
+    const locations = this.initLocations(nodes)
+
+    const cities = this.initCities(nodes, exhibitions)
 
     this.setState({
       ...this.state,
@@ -129,10 +167,10 @@ class MapApp extends Component {
       renderer,
       nodes,
       locations,
+      cities,
       currentDate,
       particleSystem,
       lineSystem,
-      operationTotal,
       colorList
     })
 
@@ -178,7 +216,15 @@ class MapApp extends Component {
       })
   }
 
-  initArtworks (data, artworkCount) {
+  initArtworks (data, artworkCount, exhibitions) {
+
+    const cityList = []
+    exhibitions.forEach(e => {
+      if (cityList.indexOf(e.loc) === -1) cityList.push(e.loc)
+    })
+
+    console.log('woop', cityList)
+
     return data
       .filter((d, i) => i < artworkCount)
       .filter((d, i) => {
@@ -195,15 +241,46 @@ class MapApp extends Component {
             return new Date(a.date) - new Date(b.date).getTime()
           })
           .map(o => {
+
+            let loc = null
+            if (o.opt_branch === 'EXPO') {
+              const detail = o.opt_detail
+                .split('-Dossier')[0]
+                .split('-')
+                .slice(-2)
+                .join('-')
+                .toLowerCase()
+              cityList.some(c => {
+                // TODO: sort cityList by longest names
+                if (detail.indexOf(c) > -1) {
+                  loc = c
+                  return true
+                } else {
+                  return false
+                }
+              })
+
+              if (loc === null) {
+                if(detail === 'moscow house of photography') loc = 'usa'
+                if(detail === 'états-unis') loc = 'fédération de russie'
+                if(detail === 'taïpei-république de chine (taïwan)') loc = 'république de chine, taïwan'
+                if (loc === null) console.log('cant find location:', detail)
+              } else {
+                // console.log('hmm?', loc, detail)
+              }
+            }
+
             return {
               ...o,
-              date: new Date(o.date).getTime()
+              date: new Date(o.date).getTime(),
+              loc
             }
           })
-          return {
-            ...a,
-            operations
-          }
+
+        return {
+          ...a,
+          operations
+        }
       })
   }
 
@@ -257,20 +334,14 @@ class MapApp extends Component {
   }
 
   initLocations (nodes) {
-    let operationTotal = 0
     const locationMap = {}
     nodes.forEach(n => {
       n.operations.forEach(o => {
         if (!locationMap[o.opt_branch]) locationMap[o.opt_branch] = 0 
         locationMap[o.opt_branch] ++
-        if (!!o.opt_branch && o.opt_branch !== 'unknown') {
-          operationTotal ++
-        }
       })
     })
-    console.log('locationMap', locationMap)
 
-    // let theta = 0
     let locations = Object.keys(locationMap)
       .filter(l => l !== 'unknown' && l.indexOf('_') === -1)
       .map(l => {
@@ -302,14 +373,12 @@ class MapApp extends Component {
       .forEach(l => {
         const parent = locations.find(p => p.id === l.split('_')[0])
         const location = new Location(l, locationMap[l])
-        // console.log('mop', l, locationMap[l])
         parent.addChildren(location)
         return location
       })
 
 
     let rad = window.innerHeight / 4
-    // let theta = -Math.PI / 2
     let theta = 0
 
     locations.forEach(l => {
@@ -319,19 +388,48 @@ class MapApp extends Component {
     const allRads = locations.reduce((a, b) => a + b.finalRad, 0)
 
     locations
-      // .sort((a, b) => b.finalRad - a.finalRad)
       .forEach(l => {
-
         const thetaOffset = l.finalRad / allRads * Math.PI * 2
         theta += thetaOffset / 2
         l.setLayout(new THREE.Vector3(0, -50, 0), theta, rad, thetaOffset)
         theta += thetaOffset / 2
       })
 
-    return {
-      locationMap,
-      locations
-    }
+    return locations
+  }
+
+  initCities (nodes, exhibitions) {
+    const width = window.innerWidth
+    const height = window.innerHeight
+
+    const cityMap = {}
+
+    nodes.forEach(n => {
+      n.operations
+        .filter(o => !!o.loc)
+        .forEach(o => {
+          if (!cityMap[o.loc]) cityMap[o.loc] = 0 
+          cityMap[o.loc] ++
+        })
+    })
+
+    let cities = Object.keys(cityMap)
+      .filter(id => !!exhibitions.find(e => e.loc === id))
+      .map(id => {
+        const exhibition = exhibitions.find(e => e.loc === id)
+        const city = new Location(id, cityMap[id])
+        // city.displayName = id
+        city.setFinalRad()
+        city.setGeoLayout(
+          map(exhibition.lon, -180, 180, -width / 2, width / 2),
+          map(exhibition.lat, -90, 90, -height / 2, height / 2)
+        )
+        return city
+      })
+
+    console.log('aga', cities, cityMap)
+
+    return cities
   }
 
   tick () {
@@ -343,6 +441,7 @@ class MapApp extends Component {
       lineSystem,
       nodes,
       locations,
+      cities,
       speed,
       width,
       height,
@@ -352,6 +451,9 @@ class MapApp extends Component {
       colorCodes,
       segmentCount,
       frameCount,
+      currentViewType,
+      recording,
+      recordingSessionName
     } = this.state
 
     let {
@@ -364,9 +466,17 @@ class MapApp extends Component {
       return
     }
 
-    locations.forEach(l => {
-      l.update()
-    })
+    if (currentViewType === 'museum') {
+      locations.forEach(l => {
+        l.update()
+      })
+    }
+
+    if (currentViewType === 'world') {
+      cities.forEach(l => {
+        l.updateGeo(cities)
+      })
+    }
 
     const attributes = particleSystem.geometry.attributes
 
@@ -396,7 +506,9 @@ class MapApp extends Component {
         }
       }
 
-      const pos = n.update(currentDate, locations, neighboringNodes, colorList, colorCodes)
+      const currentLocations = currentViewType === 'museum' ? locations : cities 
+
+      const pos = n.update(currentDate, currentLocations, neighboringNodes, colorList, colorCodes, currentViewType)
       if (!!pos) {
         const x = Math.floor((pos.x + width / 2) / width * gridResolution)
         const y = Math.floor((pos.y + height / 2) / height * gridResolution)
@@ -434,16 +546,16 @@ class MapApp extends Component {
 
     lineGeometry.array = lineGeometry.array.slice(moveTotal.length)
 
-    // hacked together
-    lineGeometry.array.reverse()
-    for (let i = 0; i < lineGeometry.array.length; i++) {
-      if (i + lastMoves.length >= lineGeometry.array.length) {
-        lineGeometry.array[i] = lastMoves[lineGeometry.array.length - i - 1]
-      } else {
-        lineGeometry.array[i] = lineGeometry.array[i + lastMoves.length]
-      }
-    }
-    lineGeometry.array.reverse()
+    // refactor
+    // lineGeometry.array.reverse()
+    // for (let i = 0; i < lineGeometry.array.length; i++) {
+    //   if (i + lastMoves.length >= lineGeometry.array.length) {
+    //     lineGeometry.array[i] = lastMoves[lineGeometry.array.length - i - 1]
+    //   } else {
+    //     lineGeometry.array[i] = lineGeometry.array[i + lastMoves.length]
+    //   }
+    // }
+    // lineGeometry.array.reverse()
 
     lineGeometry.needsUpdate = true
 
@@ -458,8 +570,59 @@ class MapApp extends Component {
       moveTotal
     })
     
-    requestAnimationFrame(this.tick)
+    if (recording) {
+      const that = this
+      const d = Date.now()
 
+      // html2canvas(document.body).then(function(canvas) {
+      //   console.log('canvasing', Date.now() - d)
+      //   CanvasToTIFF.toDataURL(canvas, function(dataUrl) {
+      //     console.log('tiffing', Date.now() - d)
+      //     var form = new FormData(),
+      //     xhr = new XMLHttpRequest()
+      //     form.append('filename', `${frameCount}`)
+      //     form.append('sessionName', recordingSessionName)
+      //     form.append('imageData', dataUrl)
+      //     xhr.open('post', 'http://localhost:8080/upload', true)
+      //     xhr.send(form)
+      //     xhr.addEventListener('load', (err, res) => {
+      //       console.log('everything', Date.now() - d)
+      //       requestAnimationFrame(that.tick)
+      //     })
+      //   });
+      // });
+
+      domtoimage.toPng(document.body)
+        .then(function (dataUrl) {
+          console.log('pnging', Date.now() - d)
+          var form = new FormData(),
+          xhr = new XMLHttpRequest()
+          form.append('filename', `${frameCount}`)
+          form.append('sessionName', recordingSessionName)
+          form.append('imageData', dataUrl)
+          xhr.open('post', 'http://localhost:8080/upload', true)
+          xhr.send(form)
+          xhr.addEventListener('load', (err, res) => {
+            console.log('everything', Date.now() - d)
+            requestAnimationFrame(that.tick)
+          })
+        })
+        .catch(function (error) {
+          console.error('oops, something went wrong!', error)
+        })
+
+    } else {
+      requestAnimationFrame(this.tick)
+    }
+
+  }
+
+  switchViewType (id) {
+    console.log('switching', id)
+    this.setState({
+      ...this.state,
+      currentViewType: id
+    })
   }
 
   render () {
@@ -470,14 +633,16 @@ class MapApp extends Component {
       artworks,
       timeRange,
       locations,
-      operationTotal,
+      cities,
       currentDate,
+      viewTypes,
+      currentViewType
     } = this.state
 
-    // console.log('aga', locations.reduce((a, b) => a.concat(b.children), []))
+    const currentLocations = currentViewType === 'museum' ? locations : cities.filter(c => c.count > 0)
 
-    const locationLabels = locations
-      .concat(locations.reduce((a, b) => a.concat(b.children), []))
+    const locationLabels = currentLocations
+      .concat(currentLocations.reduce((a, b) => a.concat(b.children), []))
       .map((l, i) => {
         const theta = Math.atan2(l.position.x, l.position.y)
         const rad = l.rad + 10
@@ -524,14 +689,43 @@ class MapApp extends Component {
     })
 
     const dateString = `${new Date(currentDate).getMonth() + 1} / ${new Date(currentDate).getYear() + 1900}`
-    const counter = (
-      <text
-        fill={`white`}
-        x={ 50 }
-        y={ 50 }
+
+    const controls = (
+      <div
+        id="controls"
+        style={{
+          position: 'absolute',
+          top: 50,
+          left: 50,
+          color:  'white',
+          zIndex: 2
+        }}
       >
-        { dateString }
-      </text>
+        <p>
+          { 
+            viewTypes.map((viewType, i) => {
+              return (
+                <span
+                  style={{
+                    paddingRight: 10,
+                    marginLeft: i > 0 ? 10 : 0,
+                    borderRight: i < viewTypes.length - 1 ? '1px solid #ccc' : 'none',
+                    color: viewType === currentViewType ? 'white' : '#aaa',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => { this.switchViewType(viewType) }}
+                  key={ `viewType-${i}` }
+                >
+                  { viewType }
+                </span>
+              )
+            }) 
+          }
+        </p>
+        <p>
+          { dateString }
+        </p>
+      </div>
     )
 
     return (
@@ -539,11 +733,11 @@ class MapApp extends Component {
         className="Map"
         ref="wrapper"
       >
+        { controls }
         <svg
           className="domOverlay"
           ref="domOverlay"
         >
-          { counter }
           { locationLabels }
         </svg>
       </div>
