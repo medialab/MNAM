@@ -2,14 +2,14 @@
 
 /*
 
-  trails
-  projection
   better geo layout
   record
+
+  projection
   fix target sequencing
   nodes should not pop in middle of location
   remove back and forths
-
+  trails start in void
   oops EXPO?
 
 */
@@ -36,6 +36,8 @@ import uploader from 'base64-image-upload'
 
 import html2canvas from 'html2canvas'
 import CanvasToTIFF from './canvas-to-tiff'
+
+// import { geoWinkel3 } from 'd3-geo-projection'
 
 
 const initialState = {
@@ -67,11 +69,13 @@ const initialState = {
     ['950'],
     ['901']],
   colorList: [],
-  segmentCount: 1000,
+  segmentCount: 10000,
   frameCount: 0,
   moveTotal: 0,
   viewTypes: ['museum', 'world'],
-  currentViewType: 'museum' 
+  currentViewType: 'museum',
+  transitionCounter: 0,
+  trailsActive: false
 }
 
 
@@ -92,6 +96,7 @@ class MapApp extends Component {
     this.initLocations = this.initLocations.bind(this)
     this.initLineSystem = this.initLineSystem.bind(this)
     this.switchViewType = this.switchViewType.bind(this)
+    this.switchTrailMode = this.switchTrailMode.bind(this)
     this.initCities = this.initCities.bind(this)
   }
 
@@ -279,7 +284,7 @@ class MapApp extends Component {
                 if(detail === 'moscow house of photography') country = 'usa'
                 if(detail === 'états-unis') country = 'fédération de russie'
                 if(detail === 'taïpei-république de chine (taïwan)') country = 'république de chine, taïwan'
-                if (country === null) console.log('cant find country:', detail)
+                // if (country === null) console.log('cant find country:', detail)
               } else {
                 // console.log('hmm?', loc, detail)
               }
@@ -306,7 +311,7 @@ class MapApp extends Component {
                 if(detail === 'moscow house of photography') city = 'usa'
                 if(detail === 'états-unis') city = 'fédération de russie'
                 if(detail === 'taïpei-république de chine (taïwan)') city = 'république de chine, taïwan'
-                if (city === null) console.log('cant find city:', detail)
+                // if (city === null) console.log('cant find city:', detail)
               } else {
                 // console.log('hmm?', loc, detail)
               }
@@ -370,8 +375,9 @@ class MapApp extends Component {
     const positions = new Array(segmentCount * 3 * 2).fill(0).map(v => 0)
     const geometry = new THREE.BufferGeometry();
     geometry.addAttribute('position', new THREE.Float32BufferAttribute(positions, 3))
-    const material = new THREE.LineBasicMaterial({color: 0x0000ff})
+    const material = new THREE.LineBasicMaterial({color: 0x1133ff, opacity: 0.22, transparent: true})
     const lineSystem = new THREE.LineSegments(geometry, material)
+    lineSystem.position.z = -5
     scene.add(lineSystem)
     return {
       lineSystem
@@ -423,7 +429,7 @@ class MapApp extends Component {
       })
 
 
-    let rad = window.innerHeight / 4
+    let rad = window.innerHeight / 3.5
     let theta = 0
 
     locations.forEach(l => {
@@ -449,6 +455,9 @@ class MapApp extends Component {
 
     const cityMap = {}
 
+    // const projection = geoWinkel3()
+    // const projection = geoWinkel3().scale([width])
+
     nodes.forEach(n => {
       n.operations
         .filter(o => !!o.city)
@@ -457,6 +466,8 @@ class MapApp extends Component {
           cityMap[o.city] ++
         })
     })
+
+    const mapOffset = new THREE.Vector2(-width/20, -height/10)
 
     let cities = Object.keys(cityMap)
       .filter(id => !!exhibitions.find(e => e.city === id))
@@ -470,10 +481,12 @@ class MapApp extends Component {
           exhibition.lon = 37.3523184
           exhibition.lat = 55.7498598
         }
-        city.setGeoLayout(
-          map(exhibition.lon, -180, 180, -width / 2, width / 2),
-          map(exhibition.lat, -90, 90, -height / 2, height / 2)
-        )
+        // console.log(projection([exhibition.lat, exhibition.lon]))
+        city.setGeoLayout([
+          map(exhibition.lon, -180, 180, -width / 2, width / 2) + mapOffset.x,
+          map(exhibition.lat, -90, 90, -height / 2, height / 2) + mapOffset.y
+        ])
+        // city.setGeoLayout(projection([exhibition.lat, exhibition.lon]))
         return city
       })
       .concat(
@@ -484,15 +497,15 @@ class MapApp extends Component {
           center.setLocation('france', 'centre pompidou')
           center.setFinalRad()
           center.displayName = 'centre pompidou'
-          center.setGeoLayout(
-            map(2.3500563, -180, 180, -width / 2, width / 2),
-            map(48.8606455, -90, 90, -height / 2, height / 2)
-          )
+          center.setGeoLayout([
+            map(2.3500563, -180, 180, -width / 2, width / 2) + mapOffset.x,
+            map(48.8606455, -90, 90, -height / 2, height / 2 + mapOffset.y)
+          ])
           return center
         })
       )
 
-    console.log('aga', cities, cityMap)
+    // console.log('aga', cities, cityMap)
 
     return cities
   }
@@ -518,7 +531,9 @@ class MapApp extends Component {
       frameCount,
       currentViewType,
       recording,
-      recordingSessionName
+      recordingSessionName,
+      transitionCounter,
+      trailsActive
     } = this.state
 
     let {
@@ -584,7 +599,7 @@ class MapApp extends Component {
 
         const lastPos = new THREE.Vector3(attributes.position.array[i * 3 + 0], attributes.position.array[i * 3 + 1], attributes.position.array[i * 3 + 2])
 
-        if (n.life > 1 && lastPos.distanceTo(pos) > 1.5) {
+        if (trailsActive && transitionCounter === 0 && n.life > 1 && lastPos.distanceTo(pos) > 1) {
           lastMoves.push(
             lastPos.x,
             lastPos.y,
@@ -607,21 +622,21 @@ class MapApp extends Component {
     attributes.position.needsUpdate = true
     attributes.color.needsUpdate = true
 
+    // TODO: optimize
     const lineGeometry = lineSystem.geometry.attributes.position
-
-    lineGeometry.array = lineGeometry.array.slice(moveTotal.length)
-
-    // TODO: refactor
-    lineGeometry.array.reverse()
-    for (let i = 0; i < lineGeometry.array.length; i++) {
-      if (i + lastMoves.length >= lineGeometry.array.length) {
-        lineGeometry.array[i] = lastMoves[lineGeometry.array.length - i - 1]
+    const l1 = lineGeometry.array.length
+    const l2 = lastMoves.length
+    const vertices = new Array(l1)
+    for (let i = 0; i < l1; i++) {
+      if (i < l2) {
+        vertices[i] = lastMoves[i]
       } else {
-        lineGeometry.array[i] = lineGeometry.array[i + lastMoves.length]
+        vertices[i] = lineGeometry.array[i - l2]
       }
     }
-    lineGeometry.array.reverse()
-
+    for (let i = 0; i < l1; i++) {
+      lineGeometry.array[i] = vertices[i]
+    }
     lineGeometry.needsUpdate = true
 
     renderer.render(scene, camera)
@@ -632,6 +647,7 @@ class MapApp extends Component {
       currentDate: Math.min(Date.now(), currentDate + speed),
       nodeGrid: newNodeGrid,
       frameCount: frameCount + 1,
+      transitionCounter: Math.max(0, transitionCounter - 1),
       moveTotal
     })
     
@@ -682,11 +698,45 @@ class MapApp extends Component {
 
   }
 
-  switchViewType (id) {
-    console.log('switching', id)
+  switchTrailMode (active) {
+    const {
+      lineSystem
+    } = this.state
+    const lineGeometry = lineSystem.geometry.attributes.position
+    const l1 = lineGeometry.array.length
+    for (let i = 0; i < l1; i++) {
+      lineGeometry.array[i] = 0
+    }
+    lineGeometry.needsUpdate = true
     this.setState({
       ...this.state,
-      currentViewType: id
+      trailsActive: active
+    })
+  }
+
+  switchViewType (id) {
+    const {
+      lineSystem,
+      cities
+    } = this.state
+    console.log('switching view type', id)
+
+    const lineGeometry = lineSystem.geometry.attributes.position
+    const l1 = lineGeometry.array.length
+    for (let i = 0; i < l1; i++) {
+      lineGeometry.array[i] = 0
+    }
+    lineGeometry.needsUpdate = true
+
+    cities.forEach(c => {
+      c.position.copy(c.originalPosition)
+    })
+
+
+    this.setState({
+      ...this.state,
+      currentViewType: id,
+      transitionCounter: 60
     })
   }
 
@@ -701,13 +751,18 @@ class MapApp extends Component {
       cities,
       currentDate,
       viewTypes,
-      currentViewType
+      currentViewType,
+      trailsActive
     } = this.state
 
     const currentLocations = currentViewType === 'museum' ? locations : cities.filter(c => c.count > 0)
-    const topLocations = currentViewType === 'museum' ? currentLocations : currentLocations
-      .sort((a, b) => b.count - a.count)
-      .filter((c, i) => i < 8 && c.count > 4)
+    const topLocations = currentViewType === 'museum' ? 
+      currentLocations.concat(currentLocations
+        .reduce((a, b) => a.concat(b.children), [])
+      )
+      : currentLocations
+        .sort((a, b) => b.count - a.count)
+        .filter((c, i) => i < 10 && c.count > 4)
 
     const locationLabels = currentLocations
       .concat(currentLocations.reduce((a, b) => a.concat(b.children), []))
@@ -767,11 +822,22 @@ class MapApp extends Component {
         style={{
           position: 'absolute',
           top: 50,
-          left: 50,
+          left: 100,
           color:  'white',
           zIndex: 2
         }}
       >
+        <p
+          style={{
+            color: trailsActive ? 'white' : '#aaa',
+            cursor: 'pointer'
+          }}
+          onClick={() => {
+            this.switchTrailMode(!trailsActive)
+          }}
+        >
+          { trailsActive ? 'hide trails' : 'show trails' }
+        </p>
         <p>
           { 
             viewTypes.map((viewType, i) => {

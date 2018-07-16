@@ -11,7 +11,7 @@ class Location {
     this.originalPosition = new THREE.Vector3()
     this.rad = 0
     this.count = 0
-    this.nodeSize = 10
+    this.nodeSize = window.innerHeight / 60
     this.children = []
     this.total = total
 
@@ -66,9 +66,9 @@ class Location {
       })
   }
 
-  setGeoLayout (x, y) {
-    this.position.set(x, y, 0)
-    this.originalPosition.set(x, y, 0)
+  setGeoLayout (coords) {
+    this.position.set(coords[0], coords[1], 0)
+    this.originalPosition.set(coords[0], coords[1], 0)
   }
 
   update () {
@@ -80,7 +80,7 @@ class Location {
     this.children.forEach(c => {
       theta += this.thetaOffset / this.children.length / 2
       c.update()
-      const r = (this.rad + c.rad) * 1.2 + 35
+      const r = (this.rad + c.rad) * 1.5 + 35
       c.position.copy(this.position.clone().add(new THREE.Vector3(Math.cos(theta) * r, Math.sin(theta) * r, 0)))
       theta += this.thetaOffset / this.children.length / 2
     })
@@ -96,7 +96,6 @@ class Location {
         .filter(c => c.count > 0)
         .forEach((c, i) => {
           if (this.position.distanceTo(c.position) < (this.rad + c.rad + 20)) {
-            // console.log('aga')
             const distanceToTarget = this.position.distanceTo(c.position)
             const force = c.position.clone().sub(this.position)
             force.negate()
@@ -107,7 +106,8 @@ class Location {
         })
     }
 
-    const attraction = this.id === 'centre pompidou' ? 0.1 : 0.0001
+    // const attraction = this.id === 'centre pompidou' ? 0.1 : 0.0001
+    const attraction = this.count * 0.00001
     const distanceToCoords = this.position.distanceTo(this.originalPosition)
     const force = this.originalPosition.clone().sub(this.position)
     force.normalize()

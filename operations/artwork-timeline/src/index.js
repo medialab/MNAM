@@ -21,16 +21,16 @@ var client2 = new XMLHttpRequest()
 var client3 = new XMLHttpRequest()
 client1.open('GET', process.env.PUBLIC_URL + '/data/artwork_operations_with_branch.json')
 client1.onload = function() {
-  // client2.open('GET', process.env.PUBLIC_URL + '/data/artwork_operations.json')
-  // client2.onload = function() {
+  client2.open('GET', process.env.PUBLIC_URL + '/data/artwork_operations.json')
+  client2.onload = function() {
     client3.open('GET', process.env.PUBLIC_URL + '/data/Exhibitions_GEO.csv')
     client3.onload = function() {
 
       // App initialization
       const rootElement = document.getElementById('root')
       const data = JSON.parse(client1.responseText)
-      // const timelineData = JSON.parse(client2.responseText)
-      const timelineData = {}
+      const timelineData = JSON.parse(client2.responseText)
+      // const timelineData = {}
 
       const exhibitionData = client3.responseText
 
@@ -60,7 +60,7 @@ client1.onload = function() {
       )
     }
     client3.send()
-  // }
-  // client2.send()
+  }
+  client2.send()
 }
 client1.send()
