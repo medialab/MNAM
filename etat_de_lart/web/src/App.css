@@ -1,0 +1,189 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  padding: 50px;
+  font-family: Helvetica, Arial, sans-serif;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+a {
+  text-decoration: none;
+  color: black;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+}
+
+hr {
+  margin: 40px 0;
+  border: none;
+  height: 1px;
+  background-color: #ccc;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.header .layout span {
+  padding: 0 5px;
+  color: #ccc;
+  cursor: pointer;
+}
+
+.header .layout span.active {
+  padding: 0 5px;
+  color: black;
+}
+
+.navigation {
+  display: flex;
+}
+
+  .navigation li {
+    margin-right: 20px;
+  }
+
+    .navigation li a {
+      color: #ccc;
+    }
+
+    .navigation li.active a {
+      color: black;
+    }
+
+.page {
+  position: relative;
+}
+
+  .title {
+    margin-bottom: 40px;
+  }
+
+  .group {
+    margin-bottom: 40px;
+  }
+
+    .group h3 {
+      margin-bottom: 10px;
+    }
+
+  .artist, .gallery {
+    display: flex;
+  }
+
+  .gallery {
+    /*height: 30px;*/
+    margin-bottom: 10px;
+  }
+
+  .gallery .artists{
+    border-top: 1px solid #e0e0e0;
+  }
+
+  .artist.full .sequence .year, .gallery.full .sequence .year {
+    border-right: 1px solid rgba(255, 255, 255, 0.5);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+    box-sizing: border-box;
+  }
+
+    .name {
+      min-width: 185px;
+      max-width: 185px;
+      font-size: 8px;
+      text-align: right;
+      padding-right: 15px;
+    }
+
+    .sequence {
+      display: flex;
+    }
+
+    .sequence .year {
+      flex: 1 10px;
+      height: 100%;
+    }
+
+    .year .mode {
+      /*border-bottom: 1px solid rgba(255, 255, 255, 0.5);*/
+      /*box-sizing: border-box;*/
+    }
+
+  .labels {
+    margin-left: 200px;
+    display: flex;
+    font-size: 8px;
+    margin-bottom: 20px;
+  }
+
+  .highlight {
+    position: fixed;
+    padding: 30px;
+    top: 15px;
+    left: 15px;
+    border: 1px solid #ddd;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    background-color: white;
+  }
+
+    .highlight h4 {
+      margin-bottom: 5px;
+    }
+
+    .highlight ul li {
+      font-size: 11px;
+    }
+
+
+
+.dom-labels {
+  position: absolute;
+  overflow: hidden;
+  pointer-events: none;
+  border-bottom: 1px solid #ccc;
+}
+
+  .dom-labels div {
+    background-color: #aaa;
+    width: 5px;
+    height: 5px;
+    border-radius: 5px;
+  }
+
+    .dom-labels div p{
+      text-align: center;
+      font-size: 11px;
+      transform: translate(-50%);
+      width: 15px;
+    }
+
+.buttons {
+  position: absolute;
+  right: 0;
+  display: flex;
+  width: auto;
+}
+
+  .buttons li {
+    margin-left: 5px;
+    font-size: 11px;
+    padding: 3px 10px;
+    background-color: #ccc;
+    transition: background-color 0.15s;
+    color: white;
+    cursor: pointer;
+  }
+
+    .buttons li:hover {
+      background-color: black;
+    }

@@ -1,0 +1,21 @@
+{
+  "name": "artfacts",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "d3-color": "^1.2.0",
+    "d3-request": "^1.0.6",
+    "react": "^15.6.2",
+    "react-dom": "^15.6.2",
+    "react-router-dom": "^4.3.1",
+    "react-scripts": "1.1.4",
+    "react-three-renderer": "git+https://git@github.com/iaaaan/react-three-renderer.git",
+    "three": "^0.92.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --env=jsdom",
+    "eject": "react-scripts eject"
+  }
+}
