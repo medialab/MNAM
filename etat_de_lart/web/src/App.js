@@ -33,6 +33,7 @@ import {
 
 import GeneralPage from './GeneralPage'
 import TimePage from './TimePage'
+import DelayPage from './DelayPage'
 import TypePage from './TypePage'
 import ProvenancePage from './ProvenancePage'
 import CollectionPage from './CollectionPage'
@@ -114,23 +115,15 @@ export default class App extends Component {
               return console.log('error loading data:', error)
             }
 
-            ////////////////////////////////////
-
             const artworks = artworkData
-              // .filter(artwork => parseInt(artwork['acquisition_year']) > 1700)
-              // .filter(artwork => artwork['acquisition_mode'].toLowerCase().indexOf('achat') > -1)
+              .filter(artwork => parseInt(artwork['acquisition_year']) > 1700)
+              .filter(artwork => artwork['acquisition_mode'].toLowerCase().indexOf('achat') > -1)
 
             const artistMap = {}
-            let com = 0
-            let esp = 0
             artworks.forEach(artwork => {
               const year = parseInt(artwork['acquisition_year'])
-              // const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
-              const artistsList = artwork['authors_list']
-              if (artistsList.indexOf(',') > -1) com++
-              if (artistsList.indexOf('&') > -1) esp++
-              // const artists = artistsList.split(',')
-              const artists = [artistsList]
+              const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
+              const artists = artistsList.split(',')
               artists
                 .filter(artistName => artistName && artistName.indexOf("Anonyme") === -1)
                 .forEach(artistName => {
@@ -148,64 +141,144 @@ export default class App extends Component {
                 })
             })
 
-            // console.log(com, esp)
-
+            const artistsByFirstAcquisition = []
             Object.keys(artistMap)
               .map(name => artistMap[name])
               .forEach(artist => {
                 artist.acquisitionDates.sort()
-                
+                const firstAcquisition = artist.acquisitionDates[0]
+                if (firstAcquisition >= 1945) {
+                  if (!artistsByFirstAcquisition[firstAcquisition - 1945]) {
+                    artistsByFirstAcquisition[firstAcquisition - 1945] = []
+                  }
+                  artistsByFirstAcquisition[firstAcquisition - 1945].push(artist)
+                }
               })
 
-
-            // console.log('ranking acquisition year span', Object.keys(artistMap)
-            //   .map(name => artistMap[name])
-            //   .sort((a1, a2) => a2.acquisitionDates.length - a1.acquisitionDates.length)
-            // )
-
-            // const timeframe = [
-            //   artworks.reduce((min, artwork) => Math.min(parseInt(artwork['acquisition_year']), min), 10000),
-            //   artworks.reduce((max, artwork) => Math.max(parseInt(artwork['acquisition_year']), max), -100),
-            // ]
-
-            const timeframe = [1945, 2015]
-
-            const maxAcquisition = Object.keys(artistMap)
-              .map(name => artistMap[name])
-              .reduce((max, artist) => Math.max(max, artist.acquisitionDates.length), 0)
-
-
-            const seniorityBuckets = new Array(timeframe[1] - timeframe[0] + 1).fill(0).map(() => new Array(maxAcquisition).fill(0))
-
-            artworks
-              .filter(artwork => parseInt(artwork['acquisition_year']) >= 1945 && parseInt(artwork['acquisition_year']) < 2016)
-              .forEach(artwork => {
-                const year = parseInt(artwork['acquisition_year'])
-                // const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
-                const artistsList = artwork['authors_list']
-                // const artists = artistsList.split(',')
-                const artists = [artistsList]
-                artists
-                  .filter(artistName => artistName && artistName.indexOf("Anonyme") === -1)
-                  .forEach(artistName => {
-                    const artist = artistMap[artistName]
-                    if (artist.acquisitionDateProcessed.indexOf(year) === -1) {
-                      const artworksAlreadyAcquired = artist.acquisitionDates.indexOf(year)
-                      seniorityBuckets[year - timeframe[0]][artworksAlreadyAcquired]++
-                      artist.acquisitionDateProcessed.push(year)
-                    }
+            const delaysByAcquisition = artistsByFirstAcquisition.map((year, i) => {
+              return year.reduce((distribution, artist) => {
+                artist.acquisitionDates.slice(1)
+                  .forEach((y, j) => {
+                    distribution[j][y - (1945 + i + 1)]++
                   })
-              })
 
-            const seniority = seniorityBuckets.map(seniorities => {
-              const artworkTotal = seniorities.reduce((total, count) => total + count, 0)
-              return seniorities.map(count => count / artworkTotal)
+                for (let j = 0; j < artist.acquisitionDates.length; j++) {
+                  const acquisitionYear = artist.acquisitionDates[j]
+                  const lastAcquisitionYear = artist.acquisitionDates[j - 1]
+                  distribution[j][acquisitionYear - lastAcquisitionYear - 1]++
+                }
+
+                return distribution
+              }, new Array(50).fill(0).map(v => new Array(100).fill(0)))
             })
 
-            // console.log('aga', fnacData, seniority)
-            // for (let i = 0; i < 70; i++) {
-            //   console.log(fnacData[i][0], seniority[i][0])
-            // }
+            delaysByAcquisition.forEach((year, i) => {
+              delaysByAcquisition[i] = year.slice(0, 10).map(acquisition => 
+                acquisition.slice(0, 10)
+              )
+            })
+
+            this.setState({
+              ...this.state,
+              delaysByAcquisition
+            })
+
+            // delaysByAcquisition.forEach(distribution =>)
+
+            // console.log('woa', delaysByAcquisition)
+
+            ////////////////////////////////////
+
+            // const artworks = artworkData
+              // .filter(artwork => parseInt(artwork['acquisition_year']) > 1700)
+              // .filter(artwork => artwork['acquisition_mode'].toLowerCase().indexOf('achat') > -1)
+
+            // const artistMap = {}
+            // let com = 0
+            // let esp = 0
+            // artworks.forEach(artwork => {
+            //   const year = parseInt(artwork['acquisition_year'])
+            //   // const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
+            //   const artistsList = artwork['authors_list']
+            //   if (artistsList.indexOf(',') > -1) com++
+            //   if (artistsList.indexOf('&') > -1) esp++
+            //   // const artists = artistsList.split(',')
+            //   const artists = [artistsList]
+            //   artists
+            //     .filter(artistName => artistName && artistName.indexOf("Anonyme") === -1)
+            //     .forEach(artistName => {
+            //       if (!artistMap[artistName]) {
+            //         artistMap[artistName] = {
+            //           name: artistName,
+            //           acquisitionDates: [],
+            //           acquisitionDateProcessed: []
+            //         }
+            //       }
+            //       const artist = artistMap[artistName]
+            //       if (artist.acquisitionDates.indexOf(year) === -1) {
+            //         artist.acquisitionDates.push(year)
+            //       }
+            //     })
+            // })
+
+            // // console.log(com, esp)
+
+            // Object.keys(artistMap)
+            //   .map(name => artistMap[name])
+            //   .forEach(artist => {
+                // artist.acquisitionDates.sort()
+                
+            //   })
+
+
+            // // console.log('ranking acquisition year span', Object.keys(artistMap)
+            // //   .map(name => artistMap[name])
+            // //   .sort((a1, a2) => a2.acquisitionDates.length - a1.acquisitionDates.length)
+            // // )
+
+            // // const timeframe = [
+            // //   artworks.reduce((min, artwork) => Math.min(parseInt(artwork['acquisition_year']), min), 10000),
+            // //   artworks.reduce((max, artwork) => Math.max(parseInt(artwork['acquisition_year']), max), -100),
+            // // ]
+
+            // const timeframe = [1945, 2015]
+
+            // const maxAcquisition = Object.keys(artistMap)
+            //   .map(name => artistMap[name])
+            //   .reduce((max, artist) => Math.max(max, artist.acquisitionDates.length), 0)
+
+
+            // const seniorityBuckets = new Array(timeframe[1] - timeframe[0] + 1).fill(0).map(() => new Array(maxAcquisition).fill(0))
+
+            // artworks
+            //   .filter(artwork => parseInt(artwork['acquisition_year']) >= 1945 && parseInt(artwork['acquisition_year']) < 2016)
+            //   .forEach(artwork => {
+            //     const year = parseInt(artwork['acquisition_year'])
+            //     // const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
+            //     const artistsList = artwork['authors_list']
+            //     // const artists = artistsList.split(',')
+            //     const artists = [artistsList]
+            //     artists
+            //       .filter(artistName => artistName && artistName.indexOf("Anonyme") === -1)
+            //       .forEach(artistName => {
+            //         const artist = artistMap[artistName]
+            //         if (artist.acquisitionDateProcessed.indexOf(year) === -1) {
+            //           const artworksAlreadyAcquired = artist.acquisitionDates.indexOf(year)
+            //           seniorityBuckets[year - timeframe[0]][artworksAlreadyAcquired]++
+            //           artist.acquisitionDateProcessed.push(year)
+            //         }
+            //       })
+            //   })
+
+            // const seniority = seniorityBuckets.map(seniorities => {
+            //   const artworkTotal = seniorities.reduce((total, count) => total + count, 0)
+            //   return seniorities.map(count => count / artworkTotal)
+            // })
+
+            // // console.log('aga', fnacData, seniority)
+            // // for (let i = 0; i < 70; i++) {
+            // //   console.log(fnacData[i][0], seniority[i][0])
+            // // }
 
 
             /////////////////////
@@ -291,7 +364,6 @@ export default class App extends Component {
                   artists,
                   artistsByYear,
                   galleries,
-                  seniority,
                   fnacData,
                   mnamData,
                   momaData
@@ -341,7 +413,9 @@ export default class App extends Component {
                   onClick={() => {
                     this.setCurrentPage('/')
                   }}
-                >General</Link>
+                >
+                  General
+                </Link>
               </li>
               <li
                 className={ currentPage === '/type' ? 'active' : '' }
@@ -351,7 +425,9 @@ export default class App extends Component {
                   onClick={() => {
                     this.setCurrentPage('/type')
                   }}
-                >Type</Link>
+                >
+                  Type
+                </Link>
               </li>
               <li
                 className={ currentPage === '/time' ? 'active' : '' }
@@ -361,7 +437,9 @@ export default class App extends Component {
                   onClick={() => {
                     this.setCurrentPage('/time')
                   }}
-                >Time</Link>
+                >
+                  Time
+                </Link>
               </li>
               <li
                 className={ currentPage === '/provenance' ? 'active' : '' }
@@ -371,7 +449,9 @@ export default class App extends Component {
                   onClick={() => {
                     this.setCurrentPage('/provenance')
                   }}
-                >Provenance</Link>
+                >
+                  Provenance
+                </Link>
               </li>
               <li
                 className={ currentPage === '/collection' ? 'active' : '' }
@@ -381,7 +461,21 @@ export default class App extends Component {
                   onClick={() => {
                     this.setCurrentPage('/collection')
                   }}
-                >Collection</Link>
+                >
+                  Collection
+                </Link>
+              </li>
+              <li
+                className={ currentPage === '/delay' ? 'active' : '' }
+              >
+                <Link
+                  to="/delay"
+                  onClick={() => {
+                    this.setCurrentPage('/delay')
+                  }}
+                >
+                  Delay
+                </Link>
               </li>
             </ul>
             <div
@@ -428,6 +522,11 @@ export default class App extends Component {
             exact
             path="/collection"
             render={(props) => (<CollectionPage {...this.state}/>)}
+          />
+          <Route 
+            exact
+            path="/delay"
+            render={(props) => (<DelayPage {...this.state}/>)}
           />
         </div>
       </Router>

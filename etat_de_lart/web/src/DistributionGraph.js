@@ -39,7 +39,6 @@ export default class DistributionGraph extends Component {
     }, 0)
 
     const domains = new THREE.Vector3(data.length - 1, data[0].length - 1, maxVolume)
-    console.log(domains)
 
     for (let i = 0; i < data.length - 1; i++) {
       for (let j = 0; j < data[i].length - 1; j++) {
