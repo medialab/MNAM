@@ -1,4 +1,4 @@
-# Etat de l'art
+# Etat de l'art - visualizations
 
 ## Installation
 
