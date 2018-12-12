@@ -5,6 +5,7 @@
   "dependencies": {
     "d3-color": "^1.2.0",
     "d3-request": "^1.0.6",
+    "d3-scale-chromatic": "^1.3.0",
     "react": "^15.6.2",
     "react-dom": "^15.6.2",
     "react-router-dom": "^4.3.1",

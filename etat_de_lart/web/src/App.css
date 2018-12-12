@@ -28,11 +28,14 @@ hr {
   border: none;
   height: 1px;
   background-color: #ccc;
+  max-width: 1024px;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
+  max-width: 1024px;
+  line-height: 2em;
 }
 
 .header .layout span {
@@ -48,6 +51,7 @@ hr {
 
 .navigation {
   display: flex;
+  flex-wrap: wrap;
 }
 
   .navigation li {
@@ -64,6 +68,7 @@ hr {
 
 .page {
   position: relative;
+  max-width: 1024px;
 }
 
   .title {
@@ -167,23 +172,28 @@ hr {
       width: 15px;
     }
 
-.buttons {
+.overlay {
   position: absolute;
   right: 0;
-  display: flex;
-  width: auto;
 }
 
-  .buttons li {
-    margin-left: 5px;
-    font-size: 11px;
-    padding: 3px 10px;
-    background-color: #ccc;
-    transition: background-color 0.15s;
-    color: white;
-    cursor: pointer;
+  .buttons {
+    display: flex;
+    width: auto;
+    position: relative;
+    margin-bottom: 15px;
   }
 
-    .buttons li:hover {
-      background-color: black;
+    .buttons li {
+      margin-left: 5px;
+      font-size: 11px;
+      padding: 3px 10px;
+      background-color: #ccc;
+      transition: background-color 0.15s;
+      color: white;
+      cursor: pointer;
     }
+
+      .buttons li:hover {
+        background-color: black;
+      }

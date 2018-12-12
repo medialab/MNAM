@@ -1,5 +1,10 @@
 /*
 
+  normalisation temps
+  boxplot
+  mnam
+  moma
+
   x distribution domaines
   x align time properly
   x display artists
@@ -12,7 +17,7 @@
     age des artistes
     activité artiste hors gallerie
     export graphics
-    filter/réorganiser galleries 
+    filter/réorganiser galleries
 
   COLLECTION/ARCHIVE
     artist trail
@@ -21,8 +26,7 @@
     update labels on same frame as camera updates
 */
 
-
-import React, { Component } from 'react';
+import React, { Component } from 'react'
 import { csv } from 'd3-request'
 
 import {
@@ -32,17 +36,17 @@ import {
 } from 'react-router-dom'
 
 import GeneralPage from './GeneralPage'
-import TimePage from './TimePage'
-import DelayPage from './DelayPage'
-import TypePage from './TypePage'
+import DelayDensePage from './DelayDensePage'
 import ProvenancePage from './ProvenancePage'
 import CollectionPage from './CollectionPage'
+import AgeDistributionPage from './AgeDistributionPage'
+import ExhibitionPage from './ExhibitionPage'
 
 import { chunk } from './utils'
+import Gallery from './Gallery'
 import Artist from './Artist'
 
-import './App.css';
-
+import './App.css'
 
 export default class App extends Component {
   constructor (props) {
@@ -55,318 +59,188 @@ export default class App extends Component {
       dataMnam: null,
       dataMoma: null
     }
+
     this.toggleLayout = this.toggleLayout.bind(this)
     this.setCurrentPage = this.setCurrentPage.bind(this)
-    this.parseData = this.parseData.bind(this)
-  }
-
-  parseData (distributionData) {
-    const dataRaw = distributionData
-      .slice(1)
-      .filter(data => parseInt(data.year) >= 1945)
-      .map(data => {
-        const distribution = []
-        data.ditributions.slice(1, -1).split(' ').join('').split(',').forEach(keyVal => {
-          const v = keyVal.split(':').map((v, i) => {
-            if (i === 0) return parseInt(v)
-            else return parseFloat(v)
-          })
-          distribution[v[0]] = v[1]
-        })
-
-        const year = parseInt(data.year)
-
-        delete data.ditributions
-        return {
-          year,
-          distribution
-        }
-      })
-      .sort((y1, y2) => y1.year - y2.year)
-
-    const maxFnacSeniority = dataRaw.reduce((max, year) => Math.max(max, year.distribution.length), 0)
-    dataRaw.forEach(year => {
-      for (let i = 0; i < maxFnacSeniority; i++) {
-        if (!year.distribution[i]) year.distribution[i] = 0
-      }
-    })
-    const data = dataRaw.map(year => year.distribution)
-    // console.log(data.join('\n'))
-    return data
+    this.initDenseDelay = this.initDenseDelay.bind(this)
   }
 
   componentDidMount () {
-    const artworksPath = `${process.env.PUBLIC_URL}/data/uniq_artworks.csv`
-    
-    const fnacDistributionPath = `${process.env.PUBLIC_URL}/data/fnac_acquisition_distri.csv`
-    const mnamDistributionPath = `${process.env.PUBLIC_URL}/data/mnam_acquisition_distri.csv`
-    const momaDistributionPath = `${process.env.PUBLIC_URL}/data/moma_acquisition_distri.csv`
-    
-    csv(fnacDistributionPath, (error, fnacDistributionData) => {
-      csv(mnamDistributionPath, (error, mnamDistributionData) => {
-        csv(momaDistributionPath, (error, momaDistributionData) => {
+    const fnacArtworksPath = `${process.env.PUBLIC_URL}/data/uniq_artworks.csv`
+    const mnamArtworksPath = `${process.env.PUBLIC_URL}/data/unique_artworks_mnam.csv`
+    const momaArtworksPath = `${process.env.PUBLIC_URL}/data/artworks_moma.csv`
 
-          const fnacData = this.parseData(fnacDistributionData)
-          const mnamData = this.parseData(mnamDistributionData).slice(0, -1)
-          const momaData = this.parseData(momaDistributionData).slice(0, -2)
-          
-          csv(artworksPath, (error, artworkData) => {
+    csv(mnamArtworksPath, (error, mnamArtworks) => {
+      if (error) {
+        throw error
+      }
+
+      csv(momaArtworksPath, (error, momaArtworks) => {
+        if (error) {
+          throw error
+        }
+
+        csv(fnacArtworksPath, (error, fnacArtworks) => {
+          if (error) {
+            throw error
+          }
+
+          const filteredFNACArtworks = fnacArtworks
+            .filter(artwork => parseInt(artwork['acquisition_year']) > 1700 && parseInt(artwork['acquisition_year']) <= 2015)
+            .filter(artwork => artwork['acquisition_mode'].toLowerCase().indexOf('achat') > -1)
+
+          const filteredMNAMArtworks = mnamArtworks
+            .filter(artwork => parseInt(artwork['Year acquisition']) <= 2015)
+            .map(artwork => {
+              const year = parseInt(artwork['Year acquisition'])
+              const authors = artwork['Id artists'].split('|').join(',')
+              return {
+                'acquisition_year': year,
+                'authors_list': authors
+              }
+            })
+            .filter(artwork => !!artwork['acquisition_year'])
+
+          const filteredMOMAArtworks = momaArtworks
+            .filter(artwork => parseInt(artwork['DateAcquired'].split('-')[0]) <= 2015)
+            .map(artwork => {
+              const year = parseInt(artwork['DateAcquired'].split('-')[0])
+              const authors = artwork['Artist']
+              return {
+                'acquisition_year': year,
+                'authors_list': authors
+              }
+            })
+            .filter(artwork => !!artwork['acquisition_year'])
+
+          const fnacArtistsMap = {}
+
+          filteredFNACArtworks.forEach(artwork => {
+            const year = parseInt(artwork['acquisition_year'])
+            const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, '')
+            const artists = artistsList.split(',')
+            artists
+              .filter(artistName => artistName && artistName.indexOf('Anonyme') === -1)
+              .forEach(artistName => {
+                if (!fnacArtistsMap[artistName]) {
+                  fnacArtistsMap[artistName] = {
+                    name: artistName,
+                    acquisitionDates: [],
+                    acquisitionDateProcessed: []
+                  }
+                }
+                const artist = fnacArtistsMap[artistName]
+                if (artist.acquisitionDates.indexOf(year) === -1) {
+                  artist.acquisitionDates.push(year)
+                }
+              })
+          })
+
+          const fnacArtistsByFirstAcquisition = []
+          Object.keys(fnacArtistsMap)
+            .map(name => fnacArtistsMap[name])
+            .forEach(artist => {
+              artist.acquisitionDates.sort()
+              const firstAcquisition = artist.acquisitionDates[0]
+              if (firstAcquisition >= 1945) {
+                if (!fnacArtistsByFirstAcquisition[firstAcquisition - 1945]) {
+                  fnacArtistsByFirstAcquisition[firstAcquisition - 1945] = []
+                }
+                fnacArtistsByFirstAcquisition[firstAcquisition - 1945].push(artist)
+              }
+            })
+
+          const delaysByAcquisition = fnacArtistsByFirstAcquisition.map((year, i) => {
+            return year.reduce((distribution, artist) => {
+              artist.acquisitionDates.slice(1)
+                .forEach((y, j) => {
+                  distribution[j][y - (1945 + i + 1)]++
+                })
+
+              for (let j = 0; j < artist.acquisitionDates.length; j++) {
+                const acquisitionYear = artist.acquisitionDates[j]
+                const lastAcquisitionYear = artist.acquisitionDates[j - 1]
+                distribution[j][acquisitionYear - lastAcquisitionYear - 1]++
+              }
+
+              return distribution
+            }, new Array(50).fill(0).map(v => new Array(100).fill(0)))
+          })
+
+          delaysByAcquisition.forEach((year, i) => {
+            delaysByAcquisition[i] = year.slice(0, 10).map(acquisition =>
+              acquisition.slice(0, 10)
+            )
+          })
+
+          // DENSE DELAY
+
+          const denseDelay = this.initDenseDelay(filteredFNACArtworks)
+          const denseDelayMNAM = this.initDenseDelay(filteredMNAMArtworks)
+          const denseDelayMOMA = this.initDenseDelay(filteredMOMAArtworks)
+
+          const galleryMap = filteredFNACArtworks
+            .filter(artwork =>
+              artwork.provenance_type === 'galerie' &&
+              parseInt(artwork.acquisition_year) >= 1945 &&
+              artwork.provenance
+            )
+            .reduce((map, artwork) => {
+              if (!map[artwork.provenance]) map[artwork.provenance] = new Gallery(artwork.provenance)
+              map[artwork.provenance].addAcquisition(artwork._id, parseInt(artwork.acquisition_year), artwork.acquisition_mode.toLowerCase(), artwork.authors_list, artwork.domain)
+              return map
+            }, {})
+
+          const galleries = Object.keys(galleryMap).map(id => galleryMap[id])
+
+          const generalPath = `${process.env.PUBLIC_URL}/data/rays_noPCA.csv`
+          csv(generalPath, (error, generalData) => {
             if (error) {
               return console.log('error loading data:', error)
             }
 
-            const artworks = artworkData
-              .filter(artwork => parseInt(artwork['acquisition_year']) > 1700)
-              .filter(artwork => artwork['acquisition_mode'].toLowerCase().indexOf('achat') > -1)
-
-            const artistMap = {}
-            artworks.forEach(artwork => {
-              const year = parseInt(artwork['acquisition_year'])
-              const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
-              const artists = artistsList.split(',')
-              artists
-                .filter(artistName => artistName && artistName.indexOf("Anonyme") === -1)
-                .forEach(artistName => {
-                  if (!artistMap[artistName]) {
-                    artistMap[artistName] = {
-                      name: artistName,
-                      acquisitionDates: [],
-                      acquisitionDateProcessed: []
-                    }
-                  }
-                  const artist = artistMap[artistName]
-                  if (artist.acquisitionDates.indexOf(year) === -1) {
-                    artist.acquisitionDates.push(year)
-                  }
-                })
-            })
-
-            const artistsByFirstAcquisition = []
-            Object.keys(artistMap)
-              .map(name => artistMap[name])
-              .forEach(artist => {
-                artist.acquisitionDates.sort()
-                const firstAcquisition = artist.acquisitionDates[0]
-                if (firstAcquisition >= 1945) {
-                  if (!artistsByFirstAcquisition[firstAcquisition - 1945]) {
-                    artistsByFirstAcquisition[firstAcquisition - 1945] = []
-                  }
-                  artistsByFirstAcquisition[firstAcquisition - 1945].push(artist)
+            const artists = generalData
+              .filter(artist => artist.artist && artist.artist.length < 100)
+              .map(artist => {
+                return {
+                  name: artist['artist'],
+                  x: parseFloat(artist['x_value'].slice(1, -1)),
+                  sequence: chunk(artist['sequence'].slice(1, -1).split(', ').map(v => parseInt(v)), 4)
                 }
               })
+              .sort((a1, a2) => a1.x - a2.x)
+              .map((artist, i) => new Artist(artist.name, i, artist.sequence, Math.floor(Math.random() * 40) + 1945))
 
-            const delaysByAcquisition = artistsByFirstAcquisition.map((year, i) => {
-              return year.reduce((distribution, artist) => {
-                artist.acquisitionDates.slice(1)
-                  .forEach((y, j) => {
-                    distribution[j][y - (1945 + i + 1)]++
-                  })
-
-                for (let j = 0; j < artist.acquisitionDates.length; j++) {
-                  const acquisitionYear = artist.acquisitionDates[j]
-                  const lastAcquisitionYear = artist.acquisitionDates[j - 1]
-                  distribution[j][acquisitionYear - lastAcquisitionYear - 1]++
-                }
-
-                return distribution
-              }, new Array(50).fill(0).map(v => new Array(100).fill(0)))
-            })
-
-            delaysByAcquisition.forEach((year, i) => {
-              delaysByAcquisition[i] = year.slice(0, 10).map(acquisition => 
-                acquisition.slice(0, 10)
-              )
-            })
-
-            this.setState({
-              ...this.state,
-              delaysByAcquisition
-            })
-
-            // delaysByAcquisition.forEach(distribution =>)
-
-            // console.log('woa', delaysByAcquisition)
-
-            ////////////////////////////////////
-
-            // const artworks = artworkData
-              // .filter(artwork => parseInt(artwork['acquisition_year']) > 1700)
-              // .filter(artwork => artwork['acquisition_mode'].toLowerCase().indexOf('achat') > -1)
-
-            // const artistMap = {}
-            // let com = 0
-            // let esp = 0
-            // artworks.forEach(artwork => {
-            //   const year = parseInt(artwork['acquisition_year'])
-            //   // const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
-            //   const artistsList = artwork['authors_list']
-            //   if (artistsList.indexOf(',') > -1) com++
-            //   if (artistsList.indexOf('&') > -1) esp++
-            //   // const artists = artistsList.split(',')
-            //   const artists = [artistsList]
-            //   artists
-            //     .filter(artistName => artistName && artistName.indexOf("Anonyme") === -1)
-            //     .forEach(artistName => {
-            //       if (!artistMap[artistName]) {
-            //         artistMap[artistName] = {
-            //           name: artistName,
-            //           acquisitionDates: [],
-            //           acquisitionDateProcessed: []
-            //         }
-            //       }
-            //       const artist = artistMap[artistName]
-            //       if (artist.acquisitionDates.indexOf(year) === -1) {
-            //         artist.acquisitionDates.push(year)
-            //       }
-            //     })
-            // })
-
-            // // console.log(com, esp)
-
-            // Object.keys(artistMap)
-            //   .map(name => artistMap[name])
-            //   .forEach(artist => {
-                // artist.acquisitionDates.sort()
-                
-            //   })
-
-
-            // // console.log('ranking acquisition year span', Object.keys(artistMap)
-            // //   .map(name => artistMap[name])
-            // //   .sort((a1, a2) => a2.acquisitionDates.length - a1.acquisitionDates.length)
-            // // )
-
-            // // const timeframe = [
-            // //   artworks.reduce((min, artwork) => Math.min(parseInt(artwork['acquisition_year']), min), 10000),
-            // //   artworks.reduce((max, artwork) => Math.max(parseInt(artwork['acquisition_year']), max), -100),
-            // // ]
-
-            // const timeframe = [1945, 2015]
-
-            // const maxAcquisition = Object.keys(artistMap)
-            //   .map(name => artistMap[name])
-            //   .reduce((max, artist) => Math.max(max, artist.acquisitionDates.length), 0)
-
-
-            // const seniorityBuckets = new Array(timeframe[1] - timeframe[0] + 1).fill(0).map(() => new Array(maxAcquisition).fill(0))
-
-            // artworks
-            //   .filter(artwork => parseInt(artwork['acquisition_year']) >= 1945 && parseInt(artwork['acquisition_year']) < 2016)
-            //   .forEach(artwork => {
-            //     const year = parseInt(artwork['acquisition_year'])
-            //     // const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
-            //     const artistsList = artwork['authors_list']
-            //     // const artists = artistsList.split(',')
-            //     const artists = [artistsList]
-            //     artists
-            //       .filter(artistName => artistName && artistName.indexOf("Anonyme") === -1)
-            //       .forEach(artistName => {
-            //         const artist = artistMap[artistName]
-            //         if (artist.acquisitionDateProcessed.indexOf(year) === -1) {
-            //           const artworksAlreadyAcquired = artist.acquisitionDates.indexOf(year)
-            //           seniorityBuckets[year - timeframe[0]][artworksAlreadyAcquired]++
-            //           artist.acquisitionDateProcessed.push(year)
-            //         }
-            //       })
-            //   })
-
-            // const seniority = seniorityBuckets.map(seniorities => {
-            //   const artworkTotal = seniorities.reduce((total, count) => total + count, 0)
-            //   return seniorities.map(count => count / artworkTotal)
-            // })
-
-            // // console.log('aga', fnacData, seniority)
-            // // for (let i = 0; i < 70; i++) {
-            // //   console.log(fnacData[i][0], seniority[i][0])
-            // // }
-
-
-            /////////////////////
-
-
-            const galleryMap = artworkData
-              .filter(artwork => 
-                artwork.provenance_type === 'galerie' 
-                && parseInt(artwork.acquisition_year) >= 1945
-                && artwork.provenance
-              )
-              .reduce((map, artwork) => {
-                if (!map[artwork.provenance]) map[artwork.provenance] = new Gallery(artwork.provenance)
-                map[artwork.provenance].addAcquisition(artwork._id, parseInt(artwork.acquisition_year), artwork.acquisition_mode.toLowerCase(), artwork.authors_list, artwork.domain) 
-                return map
-              }, {})
-
-            const galleries = Object.keys(galleryMap).map(id => galleryMap[id])
-
-            //
-            // const domains = {}
-            // galleries.forEach(gallery => {
-            //   const mainDomain = Object.keys(gallery.domainMap).reduce((mainDomain, id) => {
-            //     const count = gallery.domainMap[id]
-            //     if (count > mainDomain.count) {
-            //       return {id, count}
-            //     } else {
-            //       return mainDomain
-            //     }
-            //   }, {id: null, count: 0})
-              
-            //   const ratio = Math.floor(mainDomain.count / gallery.acquisitionTotal * 10)
-
-            //   if (!domains[mainDomain.id]) {
-            //     domains[mainDomain.id] = new Array(11).fill(0)
-            //   }
-            //   domains[mainDomain.id][ratio]++
-            // })
-            // console.log('Distribution of galleries by the ratio of artworks belonging to their domain of predilection', domains)
-            //
-
-            const generalPath = `${process.env.PUBLIC_URL}/data/rays_noPCA.csv`
-            csv(generalPath, (error, generalData) => {
+            const timePath = `${process.env.PUBLIC_URL}/data/rays_year.csv`
+            csv(timePath, (error, timeData) => {
               if (error) {
                 return console.log('error loading data:', error)
               }
 
-              const artists = generalData
-                .filter(artist => artist.artist && artist.artist.length < 100)
+              const artistsByYear = timeData
+                .filter(artist => artist.name && artist.name.length < 100)
                 .map(artist => {
-                  return {
-                    name: artist['artist'],
-                    x: parseFloat(artist['x_value'].slice(1,-1)),
-                    sequence: chunk(artist['sequence'].slice(1,-1).split(', ').map(v => parseInt(v)), 4)
+                  const a = {
+                    name: artist['name'],
+                    x: parseFloat(artist['x_value']),
+                    sequence: chunk(artist['vector'].slice(1, -1).split(' ').map(v => parseInt(v)), 4),
+                    firstAcquisition: parseInt(artist['year'])
                   }
+                  return a
                 })
                 .sort((a1, a2) => a1.x - a2.x)
-                // .slice(0, 1000)
-                .map((artist, i) => new Artist(artist.name, i, artist.sequence, Math.floor(Math.random() * 40) + 1945))
+                .map((artist, i) => new Artist(artist.name, i, artist.sequence, artist.firstAcquisition))
 
-              const timePath = `${process.env.PUBLIC_URL}/data/rays_year.csv`
-              csv(timePath, (error, timeData) => {
-                if (error) {
-                  return console.log('error loading data:', error)
-                }
-
-                const artistsByYear = timeData
-                  .filter(artist => artist.name && artist.name.length < 100)
-                  .map(artist => {
-                    const a = {
-                      name: artist['name'],
-                      x: parseFloat(artist['x_value']),
-                      sequence: chunk(artist['vector'].slice(1,-1).split(' ').map(v => parseInt(v)), 4),
-                      firstAcquisition: parseInt(artist['year'])
-                    }
-                    return a 
-                  })
-                  .sort((a1, a2) => a1.x - a2.x)
-                  .map((artist, i) => new Artist(artist.name, i, artist.sequence, artist.firstAcquisition))
-
+              window.requestAnimationFrame(() => {
                 this.setState({
                   ...this.state,
                   artists,
                   artistsByYear,
                   galleries,
-                  fnacData,
-                  mnamData,
-                  momaData
+                  delaysByAcquisition,
+                  denseDelay,
+                  denseDelayMNAM,
+                  denseDelayMOMA
                 })
               })
             })
@@ -374,6 +248,92 @@ export default class App extends Component {
         })
       })
     })
+  }
+
+  initDenseDelay (artworks) {
+    const artistMap = {}
+    const timeframe = [1945, 2015]
+    const artistsByYear = new Array(timeframe[1] - timeframe[0]).fill(0).map(v => [])
+
+    artworks
+      .filter(artwork => parseInt(artwork['acquisition_year']) < 2015)
+      .forEach(artwork => {
+        const year = parseInt(artwork['acquisition_year'])
+        const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, '')
+        const artists = artistsList.split(',')
+        artists
+          .filter(artistName => artistName && artistName.indexOf('Anonyme') === -1)
+          .forEach(artistName => {
+            if (!artistMap[artistName]) {
+              artistMap[artistName] = {
+                name: artistName,
+                acquisitionDates: [],
+                acquisitionDateProcessed: []
+              }
+            }
+            const artist = artistMap[artistName]
+            if (artist.acquisitionDates.indexOf(year) === -1) {
+              artist.acquisitionDates.push(year)
+            }
+          })
+      })
+
+    Object.keys(artistMap)
+      .map(name => artistMap[name])
+      .forEach(artist => {
+        artist.acquisitionDates
+          .sort()
+          .forEach((year, i) => {
+            if (i > 0 && year >= 1945) {
+              if (artistsByYear[year - 1945].indexOf(artist) === -1) {
+                artistsByYear[year - 1945].push(artist)
+              }
+            }
+          })
+      })
+
+    const delaysByYear = new Array(timeframe[1] - timeframe[0])
+      .fill(0)
+      .map((v, i) => {
+        const year = i + timeframe[0]
+        const delays = artistsByYear[i]
+          .map(artist => {
+            const lastAcquisitionYear = artist.acquisitionDates[artist.acquisitionDates.indexOf(year) - 1]
+            return year - lastAcquisitionYear
+          })
+          .sort((d1, d2) => d1 - d2)
+
+        // const delaysAverage = delays.reduce((total, delay) => total + delay, 0) / delays.length
+
+        const mean = delays.length / 2 === Math.floor(delays.length / 2)
+          ? (delays[Math.floor(delays.length / 2)] + delays[Math.ceil(delays.length / 2)]) / 2
+          : delays[Math.floor(delays.length / 2)]
+
+        const secondQuartile = delays.length / 4 === Math.floor(delays.length / 4)
+          ? (delays[Math.floor(delays.length / 4)] + delays[Math.ceil(delays.length / 4)]) / 2
+          : delays[Math.floor(delays.length / 4)]
+
+        const thirdQuartile = delays.length / 4 * 3 === Math.floor(delays.length / 4 * 3)
+          ? (delays[Math.floor(delays.length / 4 * 3)] + delays[Math.ceil(delays.length / 4 * 3)]) / 2
+          : delays[Math.floor(delays.length / 4 * 3)]
+
+        const total = delays.length
+
+        const min = Math.min(...delays)
+        const max = Math.max(...delays)
+
+        return {
+          mean,
+          secondQuartile,
+          thirdQuartile,
+          min,
+          max,
+          delays,
+          total
+        }
+      })
+
+    return delaysByYear
   }
 
   toggleLayout () {
@@ -390,62 +350,34 @@ export default class App extends Component {
     })
   }
 
-  render() {
+  render () {
     const {
-      artists,
       fullLayout,
-      currentPage,
-      seniority
+      currentPage
     } = this.state
-
-    if (!artists) return null
 
     return (
       <Router>
-        <div className="app">
-          <div className="header">
-            <ul className="navigation">
+        <div className='app'>
+          <div className='header'>
+            <ul className='navigation'>
               <li
-                className={ currentPage === '/' ? 'active' : '' }
+                className={currentPage === '/' ? 'active' : ''}
               >
                 <Link
-                  to="/"
+                  to='/'
                   onClick={() => {
                     this.setCurrentPage('/')
                   }}
                 >
-                  General
+                  Artist Sequences
                 </Link>
               </li>
               <li
-                className={ currentPage === '/type' ? 'active' : '' }
+                className={currentPage === '/provenance' ? 'active' : ''}
               >
                 <Link
-                  to="/type"
-                  onClick={() => {
-                    this.setCurrentPage('/type')
-                  }}
-                >
-                  Type
-                </Link>
-              </li>
-              <li
-                className={ currentPage === '/time' ? 'active' : '' }
-              >
-                <Link
-                  to="/time"
-                  onClick={() => {
-                    this.setCurrentPage('/time')
-                  }}
-                >
-                  Time
-                </Link>
-              </li>
-              <li
-                className={ currentPage === '/provenance' ? 'active' : '' }
-              >
-                <Link
-                  to="/provenance"
+                  to='/provenance'
                   onClick={() => {
                     this.setCurrentPage('/provenance')
                   }}
@@ -454,10 +386,22 @@ export default class App extends Component {
                 </Link>
               </li>
               <li
-                className={ currentPage === '/collection' ? 'active' : '' }
+                className={currentPage === '/delayDense' ? 'active' : ''}
               >
                 <Link
-                  to="/collection"
+                  to='/delayDense'
+                  onClick={() => {
+                    this.setCurrentPage('/delayDense')
+                  }}
+                >
+                  Average Delay
+                </Link>
+              </li>
+              <li
+                className={currentPage === '/collection' ? 'active' : ''}
+              >
+                <Link
+                  to='/collection'
                   onClick={() => {
                     this.setCurrentPage('/collection')
                   }}
@@ -466,124 +410,215 @@ export default class App extends Component {
                 </Link>
               </li>
               <li
-                className={ currentPage === '/delay' ? 'active' : '' }
+                className={currentPage === '/ageDistribution' ? 'active' : ''}
               >
                 <Link
-                  to="/delay"
+                  to='/ageDistribution'
                   onClick={() => {
-                    this.setCurrentPage('/delay')
+                    this.setCurrentPage('/ageDistribution')
                   }}
                 >
-                  Delay
+                  Age Distribution
+                </Link>
+              </li>
+              <li
+                className={currentPage === '/exhibitions' ? 'active' : ''}
+              >
+                <Link
+                  to='/exhibitions'
+                  onClick={() => {
+                    this.setCurrentPage('/exhibitions')
+                  }}
+                >
+                  Exhibitions
                 </Link>
               </li>
             </ul>
             <div
-              className="layout"
+              className='layout'
               onClick={this.toggleLayout}
             >
               <span
-                className={ fullLayout ? 'active' : '' }
+                className={fullLayout ? 'active' : ''}
               >
                 Full
               </span>
               /
               <span
-                className={ fullLayout ? '' : 'active' }
+                className={fullLayout ? '' : 'active'}
               >
                 Minimal
               </span>
             </div>
           </div>
 
-          <hr/>
+          <hr />
 
-          <Route 
+          <Route
             exact
-            path="/"
-            render={(props) => (<GeneralPage {...this.state}/>)}
+            path='/'
+            render={(props) => (<GeneralPage {...this.state} />)}
           />
-          <Route 
+
+          <Route
             exact
-            path="/type"
-            render={(props) => (<TypePage {...this.state}/>)}
+            path='/provenance'
+            render={(props) => (<ProvenancePage {...this.state} />)}
           />
-          <Route 
+
+          <Route
             exact
-            path="/time"
-            render={(props) => (<TimePage {...this.state}/>)}
+            path='/collection'
+            render={(props) => (<CollectionPage {...this.state} />)}
           />
-          <Route 
+
+          <Route
             exact
-            path="/provenance"
-            render={(props) => (<ProvenancePage {...this.state}/>)}
+            path='/delayDense'
+            render={(props) => (<DelayDensePage {...this.state} />)}
           />
-          <Route 
+
+          <Route
             exact
-            path="/collection"
-            render={(props) => (<CollectionPage {...this.state}/>)}
+            path='/ageDistribution'
+            render={(props) => (<AgeDistributionPage {...this.state} />)}
           />
-          <Route 
+
+          <Route
             exact
-            path="/delay"
-            render={(props) => (<DelayPage {...this.state}/>)}
-          />
+            path='/exhibitions'
+            render={(props) => (<ExhibitionPage {...this.state} />)}
+          />    
+
         </div>
       </Router>
     )
   }
 }
 
-class Gallery {
-  constructor (id) {
-    this.name = id
-    this.addAcquisition = this.addAcquisition.bind(this)
-    this.timeframe = [1945, 2016]
-    this.sequence = new Array(this.timeframe[1] - this.timeframe[0]).fill(0).map(v => [0, 0, 0, 1])
-    this.artists = new Array(this.timeframe[1] - this.timeframe[0]).fill(0).map(v => [[], [], []])
-    this.artistMap = {}
-    this.firstAcquisition = 2016
-    this.lastAcquisition = 1945
-    this.acquisitionTotal = 0
-    this.domainMap = {}
-  
-    this.addAcquisition = this.addAcquisition.bind(this)
-  }
+// initMorphology (artworkData) {
 
-  addAcquisition (id, year, mode, artistNames, domain) {
-    this.acquisitionTotal++
+//   const artworks = artworkData
+//     .filter(artwork => parseInt(artwork['acquisition_year']) > 1700)
 
-    if (year < this.firstAcquisition) {
-      this.firstAcquisition = year
-    }
+//   const artistMap = {}
+//   artworks.forEach(artwork => {
+//     const year = parseInt(artwork['acquisition_year'])
+//     const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
+//     const artists = artistsList.split(',')
 
-    if (year > this.lastAcquisition) {
-      this.lastAcquisition = year
-    }
+//     artists
+//       .filter(artistName => artistName
+//         && artistName.indexOf("Anonyme") === -1
+//         && artistName.indexOf("Various Artists") === -1
+//       )
+//       .forEach(artistName => {
+//         if (!artistMap[artistName]) {
+//           artistMap[artistName] = {
+//             name: artistName,
+//             acquisitionDates: [],
+//             acquisitionDateProcessed: []
+//           }
+//         }
+//         const artist = artistMap[artistName]
+//         artist.acquisitionDates.push(year)
+//       })
+//   })
 
-    const yearSinceStart = year - this.timeframe[0]
+//   const timeframe = [1945, 2015]
+//   const absoluteMorphology = new Array(timeframe[1] - timeframe[0]).fill(0).map(v => new Array(50).fill(0))
 
-    const modeIndex = mode === 'achat' ? 0 : 
-      mode === 'commande' ? 1 :
-      mode === 'don' ? 2 : 2
-    this.sequence[yearSinceStart][modeIndex]++
-    this.sequence[yearSinceStart][3] = 0
-    this.artists[yearSinceStart][modeIndex].push(artistNames)
-    
-    if (!this.artistMap[artistNames]) {
-      this.artistMap[artistNames] = new Array(2017 - 1945).fill(null)
-    }
+//   Object.keys(artistMap)
+//     .map(name => artistMap[name])
+//     .forEach(artist => {
+//       artist.acquisitionDates.sort()
+//       for (let i = 0; i < artist.acquisitionDates.length; i++) {
+//         for (let j = Math.max(timeframe[0], artist.acquisitionDates[i]); j < Math.min(timeframe[1], artist.acquisitionDates[i + 1] || timeframe[1]); j++) {
+//           if (i < 50) {
+//             absoluteMorphology[j - timeframe[0]][i]++
+//           }
+//         }
+//       }
+//     })
 
-    if (!this.artistMap[artistNames][yearSinceStart]) {
-      this.artistMap[artistNames][yearSinceStart] = [0, 0, 0, 0]
-    }
+//   const morphology = absoluteMorphology.map(year => {
+//     const totalArtistCount = year.reduce((count, artistCount) => count += artistCount, 0)
+//     return year.map(artistCount => artistCount / totalArtistCount)
+//   })
 
-    this.artistMap[artistNames][yearSinceStart][modeIndex]++
+//   // console.log(morphology.join('\n'))
+//   return morphology
+// }
 
-    if (!this.domainMap[domain]) {
-      this.domainMap[domain] = 0
-    }
-    this.domainMap[domain]++
-  }
-}
+// initAccumulation (artworks) {
+//   // return null
 
+//   const artistMap = {}
+//   const timeframe = [1945, 2015]
+//   const artistsByYear = new Array(timeframe[1] - timeframe[0]).fill(0).map(v => [])
+
+//   artworks
+//     .filter(artwork => parseInt(artwork['acquisition_year']) < 2015)
+//     .forEach(artwork => {
+//       const year = parseInt(artwork['acquisition_year'])
+//       const artistsList = artwork['authors_list'].replace(/ *\([^)]*\) */g, "")
+//       const artists = artistsList.split(',')
+//       artists
+//         .filter(artistName => artistName && artistName.indexOf("Anonyme") === -1)
+//         .forEach(artistName => {
+//           if (!artistMap[artistName]) {
+//             artistMap[artistName] = {
+//               name: artistName,
+//               acquisitionDates: [],
+//               acquisitionDateProcessed: []
+//             }
+//           }
+//           const artist = artistMap[artistName]
+//           if (artist.acquisitionDates.indexOf(year) === -1) {
+//             artist.acquisitionDates.push(year)
+//           }
+//         })
+//     })
+
+//   Object.keys(artistMap)
+//     .map(name => artistMap[name])
+//     .forEach(artist => {
+//       artist.acquisitionDates
+//         .sort()
+//         .forEach((year, i) => {
+//           if (i > 0 && year >= 1945) {
+//             if (artistsByYear[year - 1945].indexOf(artist) === -1) {
+//               artistsByYear[year - 1945].push(artist)
+//             }
+//           }
+//         })
+//     })
+
+//   const delaysByYear = new Array(timeframe[1] - timeframe[0])
+//     .fill(0)
+//     .map((v, i) => {
+//       const year = i + timeframe[0]
+
+//       const delayByAcquisitionCount = new Array(10).fill(0).map(v => [])
+
+//       artistsByYear[i].forEach(artist => {
+//         if (artist.acquisitionDates.indexOf(year) > 0) {
+//           const lastAcquisitionYear = artist.acquisitionDates[artist.acquisitionDates.indexOf(year) - 1]
+//           const index = artist.acquisitionDates.indexOf(year) - 1
+//           if (index < 10) {
+//             // if (!delayByAcquisitionCount[index]) {
+//             //   delayByAcquisitionCount[index] = []
+//             // }
+//             delayByAcquisitionCount[index].push(year - lastAcquisitionYear)
+//           }
+//         }
+//       })
+
+//       const averagedDelays = delayByAcquisitionCount
+//         .map(delays => delays.reduce((total, years) => total + years, 0) / (delays.length || 1))
+
+//       return averagedDelays
+//     })
+
+//   return delaysByYear
+// }

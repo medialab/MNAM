@@ -16,7 +16,7 @@ export default class DelayPage extends Component {
     const timeframe = [1945, 2015]
     const widthPerYear = (window.innerWidth - 100 - 200) / (timeframe[1] - timeframe[0])
     
-    console.log('aga', delaysByAcquisition)
+    // console.log('aga', delaysByAcquisition)
 
     const yearList = delaysByAcquisition
       .map((year, i) => {

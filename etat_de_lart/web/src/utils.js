@@ -35,8 +35,12 @@ export function toScreenPosition(v, camera) {
 
   v.project(camera)
 
-  v.x = ( v.x * widthHalf ) + widthHalf
+  v.x = - ( v.x * widthHalf ) + widthHalf
   v.y = - ( v.y * heightHalf ) + heightHalf
 
   return v
+}
+
+export function map(n, start1, stop1, start2, stop2) {
+  return (n - start1) / (stop1 - start1) * (stop2 - start2) + start2
 }
